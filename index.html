@@ -4,6 +4,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>⚽ FunToTo - 축구 점수 맞추기</title>
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -433,6 +436,10 @@
       <span>총 상금 풀</span>
       <span id="poolDisplay">₩0</span>
     </div>
+    <div style="display:flex;align-items:center;gap:5px;padding:5px 11px;border-radius:999px;background:rgba(255,255,255,.1);border:1.5px solid rgba(255,255,255,.2);font-size:.75rem;color:rgba(255,255,255,.85)" id="connStatus">
+      <span style="width:6px;height:6px;border-radius:50%;background:#aaa;flex-shrink:0" id="connectionDot"></span>
+      <span id="connectionText">연결 중…</span>
+    </div>
     <div class="mode-badge viewer" id="modeBadge">
       <span class="mode-dot"></span>
       <span id="modeBadgeText">👁 관전자</span>
@@ -442,8 +449,9 @@
   </div>
 </header>
 
-<div class="offline-banner" id="offlineBanner">
-  ⚠️ 서버에 연결할 수 없습니다. <code>node server.js</code> 를 실행하고 새로고침하세요.
+<div class="offline-banner" id="setupBanner">
+  🔧 Firebase 설정이 필요합니다. <code>index.html</code> 상단의 <code>firebaseConfig</code> 값을 채워주세요.
+  &nbsp;→&nbsp;<a href="https://console.firebase.google.com" target="_blank" style="color:#856404">Firebase 콘솔 열기</a>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -583,7 +591,21 @@
 </main>
 
 <script>
-  const API = '/api/state';
+  // ── Firebase Config ────────────────────────────────────────────────
+  // Firebase 콘솔(https://console.firebase.google.com)에서
+  // 프로젝트 > 앱 추가(웹) 후 아래 값을 입력하세요.
+  const firebaseConfig = {
+    apiKey:            "YOUR_API_KEY",
+    authDomain:        "YOUR_PROJECT_ID.firebaseapp.com",
+    databaseURL:       "https://YOUR_PROJECT_ID-default-rtdb.firebaseio.com",
+    projectId:         "YOUR_PROJECT_ID",
+    storageBucket:     "YOUR_PROJECT_ID.appspot.com",
+    messagingSenderId: "YOUR_SENDER_ID",
+    appId:             "YOUR_APP_ID"
+  };
+  // ──────────────────────────────────────────────────────────────────
+
+  const IS_CONFIGURED = !Object.values(firebaseConfig).some(v => String(v).startsWith('YOUR_'));
   const ADMIN_SECRET = 'QkrQkrdl';
 
   let entries = [];
@@ -593,45 +615,40 @@
   let isAdmin = false;
   let keyBuffer = '';
   let keyBufferTimer = null;
+  let stateRef = null;
+  let teamChangeTimer = null;
 
   function teamHome() { return homeTeam.trim() || '홈팀'; }
   function teamAway() { return awayTeam.trim() || '원정팀'; }
 
-  /* ── Server I/O ── */
-  async function saveState() {
-    const payload = JSON.stringify({ entries, resultScore, homeTeam, awayTeam });
-    try {
-      const res = await fetch(API, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: payload
-      });
-      if (!res.ok) throw new Error();
-    } catch {
-      showToast('⚠️ 저장 실패 — 서버를 확인하세요');
-    }
+  /* ── Firebase I/O ── */
+  function saveState() {
+    if (!stateRef) return;
+    stateRef.set({ entries, resultScore, homeTeam, awayTeam })
+      .catch(() => showToast('⚠️ 저장 실패 — Firebase 연결을 확인하세요'));
   }
 
-  async function loadState() {
-    try {
-      const res = await fetch(API);
-      if (!res.ok) throw new Error();
-      const data = await res.json();
-      if (!data) return;
-      entries = Array.isArray(data.entries) ? data.entries : [];
+  function applySnapshot(data) {
+    if (data) {
+      entries     = Array.isArray(data.entries) ? data.entries : [];
       resultScore = data.resultScore || null;
-      homeTeam = data.homeTeam || '홈팀';
-      awayTeam = data.awayTeam || '원정팀';
-      document.getElementById('homeTeamInput').value = homeTeam === '홈팀' ? '' : homeTeam;
-      document.getElementById('awayTeamInput').value = awayTeam === '원정팀' ? '' : awayTeam;
-      if (resultScore) {
-        document.getElementById('resultHome').value = resultScore.home;
-        document.getElementById('resultAway').value = resultScore.away;
-      }
-      document.getElementById('offlineBanner').classList.remove('visible');
-    } catch {
-      document.getElementById('offlineBanner').classList.add('visible');
+      homeTeam    = data.homeTeam || '홈팀';
+      awayTeam    = data.awayTeam || '원정팀';
+    } else {
+      entries = []; resultScore = null;
+      homeTeam = '홈팀'; awayTeam = '원정팀';
     }
+    // 입력 중인 필드는 덮어쓰지 않음
+    const htEl = document.getElementById('homeTeamInput');
+    const atEl = document.getElementById('awayTeamInput');
+    const rhEl = document.getElementById('resultHome');
+    const raEl = document.getElementById('resultAway');
+    if (document.activeElement !== htEl) htEl.value = homeTeam === '홈팀' ? '' : homeTeam;
+    if (document.activeElement !== atEl) atEl.value = awayTeam === '원정팀' ? '' : awayTeam;
+    if (document.activeElement !== rhEl) rhEl.value = resultScore ? resultScore.home : '';
+    if (document.activeElement !== raEl) raEl.value = resultScore ? resultScore.away : '';
+    renderTeamLabels();
+    render();
   }
 
   /* ── Admin mode ── */
@@ -639,7 +656,7 @@
     isAdmin = on;
     document.body.classList.toggle('admin-mode', on);
     const badge = document.getElementById('modeBadge');
-    const text = document.getElementById('modeBadgeText');
+    const text  = document.getElementById('modeBadgeText');
     if (on) {
       badge.className = 'mode-badge admin';
       text.textContent = '🔑 관리자';
@@ -664,8 +681,10 @@
   function onTeamChange() {
     homeTeam = document.getElementById('homeTeamInput').value.trim() || '홈팀';
     awayTeam = document.getElementById('awayTeamInput').value.trim() || '원정팀';
-    saveState();
     renderTeamLabels();
+    // 타이핑 중 과도한 Firebase 쓰기 방지 — 500ms 디바운스
+    clearTimeout(teamChangeTimer);
+    teamChangeTimer = setTimeout(saveState, 500);
   }
   function renderTeamLabels() {
     const h = teamHome(), a = teamAway();
@@ -677,19 +696,15 @@
   }
 
   /* ── Modal ── */
-  function openNewGameModal() { document.getElementById('newGameModal').classList.add('visible'); }
+  function openNewGameModal()  { document.getElementById('newGameModal').classList.add('visible'); }
   function closeNewGameModal() { document.getElementById('newGameModal').classList.remove('visible'); }
   function confirmNewGame() {
-    entries = []; resultScore = null;
-    homeTeam = '홈팀'; awayTeam = '원정팀';
     document.getElementById('resultHome').value = '';
     document.getElementById('resultAway').value = '';
     document.getElementById('homeTeamInput').value = '';
     document.getElementById('awayTeamInput').value = '';
-    fetch(API, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: 'null' }).catch(() => {});
+    if (stateRef) stateRef.set(null).catch(() => {});
     closeNewGameModal();
-    renderTeamLabels();
-    render();
   }
 
   /* ── Data ops ── */
@@ -858,7 +873,34 @@
   });
 
   /* ── Init ── */
-  loadState().then(() => { renderTeamLabels(); render(); });
+  if (!IS_CONFIGURED) {
+    document.getElementById('setupBanner').classList.add('visible');
+    document.getElementById('connectionText').textContent = '미설정';
+    renderTeamLabels();
+    render();
+  } else {
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+    stateRef = db.ref('funtoto/state');
+
+    // 실시간 데이터 동기화 — 연결된 모든 기기가 자동 업데이트
+    stateRef.on('value', snapshot => {
+      applySnapshot(snapshot.val());
+    });
+
+    // 연결 상태 표시
+    db.ref('.info/connected').on('value', snap => {
+      const dot  = document.getElementById('connectionDot');
+      const text = document.getElementById('connectionText');
+      if (snap.val()) {
+        dot.style.background  = '#4caf50';
+        text.textContent = '실시간 연결됨';
+      } else {
+        dot.style.background  = '#f44336';
+        text.textContent = '연결 끊김';
+      }
+    });
+  }
 </script>
 </body>
 </html>
