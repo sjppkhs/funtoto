@@ -483,11 +483,39 @@
 
     /* ── Mobile tweaks ── */
     @media (max-width: 480px) {
-      .header-left h1 { font-size: 1.2rem; }
+      header {
+        flex-wrap: nowrap;
+        align-items: flex-start;
+        padding: 12px 14px;
+        gap: 8px;
+      }
+      .header-left {
+        flex: 1 1 0;
+        min-width: 0;
+      }
+      .header-left h1 { font-size: 1.15rem; }
+      .header-left .subtitle {
+        font-size: .68rem;
+        word-break: keep-all;
+        line-height: 1.35;
+      }
+      .header-right {
+        flex-shrink: 0;
+        max-width: 48%;
+      }
+      .pool-label { font-size: .6rem; }
       .pool-amount { font-size: 1.3rem; }
-      .header-btns { flex-direction: row; }
+      .header-btns {
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        gap: 5px;
+        margin-top: 2px;
+      }
+      .btn-header {
+        padding: 5px 10px;
+        font-size: .75rem;
+      }
       .card { padding: 14px 12px; }
-      /* hide less critical columns on very small screens */
       .hide-xs { display: none !important; }
       table { font-size: .82rem; }
       thead th, tbody td { padding: 8px 7px; }
