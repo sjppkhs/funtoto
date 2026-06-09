@@ -411,6 +411,71 @@
     }
     .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
+    /* ── History modal ── */
+    .modal-lg { max-width: 560px; text-align: left; }
+    .modal-lg h2 { margin-bottom: 16px; text-align: center; }
+    .history-list { display: flex; flex-direction: column; gap: 10px; max-height: 60vh; overflow-y: auto; }
+    .history-item {
+      border: 1.5px solid var(--border); border-radius: 10px;
+      padding: 12px 14px; display: flex; align-items: center;
+      justify-content: space-between; gap: 10px; flex-wrap: wrap;
+    }
+    .history-item:hover { background: #fafafa; }
+    .history-item.active-game { border-color: var(--green-light); background: var(--green-pale); }
+    .history-meta { flex: 1; min-width: 0; }
+    .history-title { font-weight: 700; font-size: .95rem; margin-bottom: 3px; }
+    .history-teams { font-size: .82rem; color: #1565c0; font-weight: 600; }
+    .history-info { font-size: .78rem; color: var(--muted); margin-top: 3px; }
+    .history-result {
+      font-size: .85rem; font-weight: 800;
+      padding: 3px 10px; border-radius: 999px;
+      background: var(--gold); color: #5a3e00;
+      white-space: nowrap;
+    }
+    .history-result.pending {
+      background: #f1f3f5; color: var(--muted); font-weight: 600;
+    }
+    .btn-load {
+      padding: 6px 14px;
+      background: var(--green); color: white;
+      border: none; border-radius: 7px;
+      font-size: .82rem; font-weight: 700;
+      cursor: pointer; transition: background .2s; white-space: nowrap;
+    }
+    .btn-load:hover { background: var(--green-light); }
+    .history-empty { text-align: center; color: var(--muted); padding: 24px 0; font-size: .9rem; }
+
+    /* ── Password modal ── */
+    .pw-input-wrap { position: relative; margin-bottom: 20px; }
+    .pw-input-wrap input {
+      width: 100%;
+      padding: 11px 42px 11px 14px;
+      border: 2px solid var(--border);
+      border-radius: 8px;
+      font-size: 1rem;
+      transition: border-color .2s;
+    }
+    .pw-input-wrap input:focus { outline: none; border-color: var(--green-light); }
+    .pw-input-wrap input.error { border-color: var(--accent-dark); animation: shake .3s; }
+    .pw-toggle {
+      position: absolute; right: 10px; top: 50%;
+      transform: translateY(-50%);
+      background: none; border: none;
+      cursor: pointer; color: var(--muted); font-size: 1rem; padding: 4px;
+    }
+    @keyframes shake {
+      0%,100%{transform:translateX(0)} 25%{transform:translateX(-6px)} 75%{transform:translateX(6px)}
+    }
+    .btn-login {
+      width: 100%;
+      padding: 11px;
+      background: var(--green); color: white;
+      border: none; border-radius: 8px;
+      font-size: .95rem; font-weight: 700;
+      cursor: pointer; transition: background .2s;
+    }
+    .btn-login:hover { background: var(--green-light); }
+
     /* ── Mobile tweaks ── */
     @media (max-width: 480px) {
       .header-left h1 { font-size: 1.2rem; }
@@ -444,6 +509,8 @@
       <span class="mode-dot"></span>
       <span id="modeBadgeText">👁 관전자</span>
     </div>
+    <button class="btn-header" onclick="openHistoryModal()">📋 기록</button>
+    <button class="btn-header viewer-only" onclick="openPwModal()">🔑 관리자</button>
     <button class="btn-header admin-only" onclick="openNewGameModal()">새 게임</button>
     <button class="btn-header admin-only" onclick="exitAdmin()">종료</button>
   </div>
@@ -456,14 +523,44 @@
 
 <div class="toast" id="toast"></div>
 
+<!-- Password Modal -->
+<div class="modal-overlay" id="pwModal">
+  <div class="modal">
+    <h2>🔑 관리자 로그인</h2>
+    <p>관리자 비밀번호를 입력하세요.</p>
+    <div class="pw-input-wrap">
+      <input type="password" id="pwInput" placeholder="비밀번호" onkeydown="onPwKey(event)" autocomplete="off" />
+      <button class="pw-toggle" onclick="togglePwVisible()" id="pwToggleBtn">👁</button>
+    </div>
+    <button class="btn-login" onclick="submitPassword()">확인</button>
+  </div>
+</div>
+
 <!-- New Game Modal -->
 <div class="modal-overlay" id="newGameModal">
   <div class="modal">
     <h2>🆕 새 게임 시작</h2>
-    <p>현재 게임의 모든 데이터(참여자, 베팅, 결과)가 삭제됩니다.<br>계속하시겠습니까?</p>
+    <p>현재 게임은 기록에 저장되고 새 게임이 시작됩니다.</p>
+    <div style="margin-bottom:20px">
+      <label style="display:block;font-size:.78rem;font-weight:700;color:var(--muted);margin-bottom:6px;text-transform:uppercase">새 경기명 (선택)</label>
+      <input type="text" id="newGameTitle" placeholder="예) 2025-06-10 팀장배" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:.95rem" />
+    </div>
     <div class="modal-btns">
       <button class="btn-cancel-modal" onclick="closeNewGameModal()">취소</button>
-      <button class="btn-confirm-new" onclick="confirmNewGame()">삭제하고 새 게임</button>
+      <button class="btn-confirm-new" onclick="confirmNewGame()">기록하고 새 게임 →</button>
+    </div>
+  </div>
+</div>
+
+<!-- History Modal -->
+<div class="modal-overlay" id="historyModal">
+  <div class="modal modal-lg">
+    <h2>📋 게임 기록</h2>
+    <div class="history-list" id="historyList">
+      <div class="history-empty">불러오는 중…</div>
+    </div>
+    <div style="margin-top:16px;text-align:right">
+      <button class="btn-cancel-modal" onclick="closeHistoryModal()">닫기</button>
     </div>
   </div>
 </div>
@@ -473,6 +570,11 @@
   <!-- Match Setup -->
   <div class="card">
     <div class="card-title">⚽ 경기 설정</div>
+    <div class="admin-only" style="margin-bottom:12px">
+      <label style="display:block;font-size:.72rem;font-weight:700;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.04em">경기명</label>
+      <input type="text" id="gameTitleInput" placeholder="예) 2025-06-10 팀장배" oninput="onTitleChange()"
+        style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:.95rem" />
+    </div>
     <div class="match-setup-grid admin-only">
       <div class="team-input-wrap home">
         <label>홈팀</label>
@@ -485,9 +587,14 @@
       </div>
     </div>
     <div class="match-banner" id="matchBanner">
-      <span class="home-name" id="bannerHome">홈팀</span>
-      <span class="vs-text">VS</span>
-      <span class="away-name" id="bannerAway">원정팀</span>
+      <div style="text-align:center;width:100%">
+        <div id="bannerTitle" style="font-size:.8rem;color:var(--muted);font-weight:600;margin-bottom:4px"></div>
+        <div style="display:flex;align-items:center;justify-content:center;gap:14px">
+          <span class="home-name" id="bannerHome">홈팀</span>
+          <span class="vs-text">VS</span>
+          <span class="away-name" id="bannerAway">원정팀</span>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -607,16 +714,30 @@
   // ──────────────────────────────────────────────────────────────────
 
   const IS_CONFIGURED = !Object.values(firebaseConfig).some(v => String(v).startsWith('YOUR_'));
-  const ADMIN_SECRET = 'QkrQkrdl';
+
+  // SHA-256("QkrQkrdl") — 소스에 평문 비밀번호 없이 해시만 보관
+  const _AH = '13a44bf7599dc90a03482d4870d82f173ae2bcb8cc98d087cbc6a21714634ac3';
+
+  async function _hash(s) {
+    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s));
+    return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+  }
+
+  async function checkPassword(pw) {
+    return (await _hash(pw)) === _AH;
+  }
 
   let entries = [];
   let resultScore = null;
   let homeTeam = '홈팀';
   let awayTeam = '원정팀';
+  let gameTitle = '';
+  let gameCreatedAt = null;
   let isAdmin = false;
   let keyBuffer = '';
   let keyBufferTimer = null;
   let stateRef = null;
+  let historyRef = null;
   let teamChangeTimer = null;
 
   function teamHome() { return homeTeam.trim() || '홈팀'; }
@@ -625,31 +746,71 @@
   /* ── Firebase I/O ── */
   function saveState() {
     if (!stateRef) return;
-    stateRef.set({ entries, resultScore, homeTeam, awayTeam })
+    stateRef.set({ entries, resultScore, homeTeam, awayTeam, gameTitle, gameCreatedAt })
       .catch(() => showToast('⚠️ 저장 실패 — Firebase 연결을 확인하세요'));
   }
 
   function applySnapshot(data) {
     if (data) {
-      entries     = Array.isArray(data.entries) ? data.entries : [];
-      resultScore = data.resultScore || null;
-      homeTeam    = data.homeTeam || '홈팀';
-      awayTeam    = data.awayTeam || '원정팀';
+      entries        = Array.isArray(data.entries) ? data.entries : [];
+      resultScore    = data.resultScore || null;
+      homeTeam       = data.homeTeam || '홈팀';
+      awayTeam       = data.awayTeam || '원정팀';
+      gameTitle      = data.gameTitle || '';
+      gameCreatedAt  = data.gameCreatedAt || null;
     } else {
       entries = []; resultScore = null;
       homeTeam = '홈팀'; awayTeam = '원정팀';
+      gameTitle = ''; gameCreatedAt = null;
     }
     // 입력 중인 필드는 덮어쓰지 않음
     const htEl = document.getElementById('homeTeamInput');
     const atEl = document.getElementById('awayTeamInput');
+    const gtEl = document.getElementById('gameTitleInput');
     const rhEl = document.getElementById('resultHome');
     const raEl = document.getElementById('resultAway');
     if (document.activeElement !== htEl) htEl.value = homeTeam === '홈팀' ? '' : homeTeam;
     if (document.activeElement !== atEl) atEl.value = awayTeam === '원정팀' ? '' : awayTeam;
+    if (document.activeElement !== gtEl) gtEl.value = gameTitle;
     if (document.activeElement !== rhEl) rhEl.value = resultScore ? resultScore.home : '';
     if (document.activeElement !== raEl) raEl.value = resultScore ? resultScore.away : '';
     renderTeamLabels();
     render();
+  }
+
+  /* ── Password modal ── */
+  function openPwModal() {
+    document.getElementById('pwInput').value = '';
+    document.getElementById('pwInput').classList.remove('error');
+    document.getElementById('pwModal').classList.add('visible');
+    setTimeout(() => document.getElementById('pwInput').focus(), 100);
+  }
+  function closePwModal() {
+    document.getElementById('pwModal').classList.remove('visible');
+  }
+  function togglePwVisible() {
+    const el = document.getElementById('pwInput');
+    const btn = document.getElementById('pwToggleBtn');
+    const isHidden = el.type === 'password';
+    el.type = isHidden ? 'text' : 'password';
+    btn.textContent = isHidden ? '🙈' : '👁';
+  }
+  function onPwKey(e) {
+    if (e.key === 'Enter') submitPassword();
+    if (e.key === 'Escape') closePwModal();
+  }
+  async function submitPassword() {
+    const pw = document.getElementById('pwInput').value;
+    if (await checkPassword(pw)) {
+      closePwModal();
+      setAdmin(true);
+    } else {
+      const el = document.getElementById('pwInput');
+      el.classList.add('error');
+      el.value = '';
+      setTimeout(() => el.classList.remove('error'), 400);
+      showToast('비밀번호가 틀렸습니다');
+    }
   }
 
   /* ── Admin mode ── */
@@ -678,17 +839,23 @@
     t._timer = setTimeout(() => t.classList.remove('show'), 2400);
   }
 
-  /* ── Team names ── */
+  /* ── Team / Title ── */
+  function onTitleChange() {
+    gameTitle = document.getElementById('gameTitleInput').value.trim();
+    renderTeamLabels();
+    clearTimeout(teamChangeTimer);
+    teamChangeTimer = setTimeout(saveState, 500);
+  }
   function onTeamChange() {
     homeTeam = document.getElementById('homeTeamInput').value.trim() || '홈팀';
     awayTeam = document.getElementById('awayTeamInput').value.trim() || '원정팀';
     renderTeamLabels();
-    // 타이핑 중 과도한 Firebase 쓰기 방지 — 500ms 디바운스
     clearTimeout(teamChangeTimer);
     teamChangeTimer = setTimeout(saveState, 500);
   }
   function renderTeamLabels() {
     const h = teamHome(), a = teamAway();
+    document.getElementById('bannerTitle').textContent = gameTitle || '';
     document.getElementById('bannerHome').textContent = h;
     document.getElementById('bannerAway').textContent = a;
     document.getElementById('scoreLabelText').textContent = `예상 점수 (${h}:${a})`;
@@ -696,16 +863,118 @@
     document.getElementById('resultAwayLabel').textContent = a;
   }
 
-  /* ── Modal ── */
-  function openNewGameModal()  { document.getElementById('newGameModal').classList.add('visible'); }
+  /* ── New Game Modal ── */
+  function openNewGameModal() {
+    document.getElementById('newGameTitle').value = '';
+    document.getElementById('newGameModal').classList.add('visible');
+    setTimeout(() => document.getElementById('newGameTitle').focus(), 100);
+  }
   function closeNewGameModal() { document.getElementById('newGameModal').classList.remove('visible'); }
+
   function confirmNewGame() {
+    // 현재 게임 데이터가 있으면 history에 저장
+    const hasData = entries.length > 0 || resultScore;
+    if (hasData && historyRef) {
+      const archiveId = Date.now();
+      historyRef.child(String(archiveId)).set({
+        gameTitle: gameTitle || defaultTitle(),
+        homeTeam, awayTeam,
+        entries, resultScore,
+        createdAt: gameCreatedAt || archiveId,
+        archivedAt: archiveId
+      }).catch(() => {});
+    }
+
+    // 새 게임 초기화
+    const newTitle = document.getElementById('newGameTitle').value.trim();
+    const now = Date.now();
+    entries = []; resultScore = null;
+    homeTeam = '홈팀'; awayTeam = '원정팀';
+    gameTitle = newTitle; gameCreatedAt = now;
+
     document.getElementById('resultHome').value = '';
     document.getElementById('resultAway').value = '';
     document.getElementById('homeTeamInput').value = '';
     document.getElementById('awayTeamInput').value = '';
-    if (stateRef) stateRef.set(null).catch(() => {});
+    document.getElementById('gameTitleInput').value = newTitle;
+
+    if (stateRef) stateRef.set({ entries, resultScore, homeTeam, awayTeam, gameTitle, gameCreatedAt: now }).catch(() => {});
     closeNewGameModal();
+    renderTeamLabels();
+    render();
+    showToast('새 게임이 시작됐습니다');
+  }
+
+  function defaultTitle() {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')} 경기`;
+  }
+
+  /* ── History Modal ── */
+  function openHistoryModal() {
+    document.getElementById('historyModal').classList.add('visible');
+    renderHistoryList();
+  }
+  function closeHistoryModal() { document.getElementById('historyModal').classList.remove('visible'); }
+
+  function renderHistoryList() {
+    const listEl = document.getElementById('historyList');
+    if (!historyRef) {
+      listEl.innerHTML = '<div class="history-empty">Firebase가 연결되지 않았습니다.</div>';
+      return;
+    }
+    listEl.innerHTML = '<div class="history-empty">불러오는 중…</div>';
+    historyRef.orderByChild('archivedAt').once('value', snapshot => {
+      const games = [];
+      snapshot.forEach(child => games.push({ id: child.key, ...child.val() }));
+      games.reverse(); // 최신순
+
+      if (!games.length) {
+        listEl.innerHTML = '<div class="history-empty">저장된 게임 기록이 없습니다.</div>';
+        return;
+      }
+      listEl.innerHTML = games.map(g => {
+        const date = g.archivedAt ? new Date(g.archivedAt).toLocaleDateString('ko-KR', { month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit' }) : '';
+        const title = g.gameTitle || defaultTitle();
+        const home = g.homeTeam || '홈팀';
+        const away = g.awayTeam || '원정팀';
+        const count = Array.isArray(g.entries) ? g.entries.length : 0;
+        const pool = Array.isArray(g.entries) ? g.entries.reduce((s,e) => s + (e.amount||0), 0) : 0;
+        const resultText = g.resultScore ? `${g.resultScore.home} : ${g.resultScore.away}` : null;
+        const loadBtn = isAdmin
+          ? `<button class="btn-load" onclick="loadGameFromHistory('${g.id}')">불러오기</button>`
+          : '';
+        return `
+          <div class="history-item">
+            <div class="history-meta">
+              <div class="history-title">${title}</div>
+              <div class="history-teams">${home} <span style="color:var(--muted);font-weight:400">vs</span> ${away}</div>
+              <div class="history-info">${date} &nbsp;·&nbsp; 참여 ${count}명 &nbsp;·&nbsp; ${fmt(pool)}</div>
+            </div>
+            <span class="history-result${resultText ? '' : ' pending'}">${resultText || '미결'}</span>
+            ${loadBtn}
+          </div>`;
+      }).join('');
+    });
+  }
+
+  function loadGameFromHistory(id) {
+    if (!historyRef || !stateRef) return;
+    historyRef.child(id).once('value', snapshot => {
+      const g = snapshot.val();
+      if (!g) return;
+      stateRef.set({
+        entries:      g.entries || [],
+        resultScore:  g.resultScore || null,
+        homeTeam:     g.homeTeam || '홈팀',
+        awayTeam:     g.awayTeam || '원정팀',
+        gameTitle:    g.gameTitle || '',
+        gameCreatedAt: g.createdAt || null
+      }).then(() => {
+        closeHistoryModal();
+        showToast(`📂 "${g.gameTitle || '게임'}" 불러오기 완료`);
+      }).catch(() => showToast('⚠️ 불러오기 실패'));
+    });
   }
 
   /* ── Data ops ── */
@@ -860,26 +1129,37 @@
   document.getElementById('newGameModal').addEventListener('click', function(e) {
     if (e.target === this) closeNewGameModal();
   });
+  document.getElementById('pwModal').addEventListener('click', function(e) {
+    if (e.target === this) closePwModal();
+  });
+  document.getElementById('historyModal').addEventListener('click', function(e) {
+    if (e.target === this) closeHistoryModal();
+  });
 
   // e.code(물리 키)로 변환 — 한국어 IME 활성 시에도 정확히 감지
   function physicalKey(e) {
     if (e.code && e.code.startsWith('Key')) {
-      const base = e.code.slice(3); // 'KeyQ' → 'Q'
+      const base = e.code.slice(3);
       return e.shiftKey ? base : base.toLowerCase();
     }
     return e.key;
   }
 
+  const _KBL = 8; // 시퀀스 길이 (소스에서 비밀번호 길이만 노출)
   document.addEventListener('keydown', e => {
     if (e.key === 'Enter' && (e.target.id === 'inputName' || e.target.id === 'inputAmount')) addEntry();
-    if (e.key === 'Escape') closeNewGameModal();
+    if (e.key === 'Escape') { closeNewGameModal(); closePwModal(); }
 
     if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
     keyBuffer += physicalKey(e);
-    if (keyBuffer.length > ADMIN_SECRET.length) keyBuffer = keyBuffer.slice(-ADMIN_SECRET.length);
+    if (keyBuffer.length > _KBL) keyBuffer = keyBuffer.slice(-_KBL);
     clearTimeout(keyBufferTimer);
     keyBufferTimer = setTimeout(() => { keyBuffer = ''; }, 3000);
-    if (keyBuffer === ADMIN_SECRET) { keyBuffer = ''; setAdmin(!isAdmin); }
+    if (keyBuffer.length === _KBL) {
+      checkPassword(keyBuffer).then(ok => {
+        if (ok) { keyBuffer = ''; setAdmin(!isAdmin); }
+      });
+    }
   });
 
   /* ── Init ── */
@@ -891,7 +1171,8 @@
   } else {
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
-    stateRef = db.ref('funtoto/state');
+    stateRef   = db.ref('funtoto/state');
+    historyRef = db.ref('funtoto/history');
 
     // 실시간 데이터 동기화 — 연결된 모든 기기가 자동 업데이트
     stateRef.on('value', snapshot => {
