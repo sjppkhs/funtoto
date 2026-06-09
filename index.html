@@ -861,12 +861,21 @@
     if (e.target === this) closeNewGameModal();
   });
 
+  // e.code(물리 키)로 변환 — 한국어 IME 활성 시에도 정확히 감지
+  function physicalKey(e) {
+    if (e.code && e.code.startsWith('Key')) {
+      const base = e.code.slice(3); // 'KeyQ' → 'Q'
+      return e.shiftKey ? base : base.toLowerCase();
+    }
+    return e.key;
+  }
+
   document.addEventListener('keydown', e => {
     if (e.key === 'Enter' && (e.target.id === 'inputName' || e.target.id === 'inputAmount')) addEntry();
     if (e.key === 'Escape') closeNewGameModal();
 
     if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
-    keyBuffer += e.key;
+    keyBuffer += physicalKey(e);
     if (keyBuffer.length > ADMIN_SECRET.length) keyBuffer = keyBuffer.slice(-ADMIN_SECRET.length);
     clearTimeout(keyBufferTimer);
     keyBufferTimer = setTimeout(() => { keyBuffer = ''; }, 3000);
