@@ -47,43 +47,48 @@
     .header-left .subtitle { font-size: .78rem; opacity: .7; margin-top: 2px; }
     .header-right {
       display: flex;
-      align-items: center;
+      flex-direction: column;
+      align-items: flex-end;
       gap: 8px;
-      flex-wrap: wrap;
-      justify-content: flex-end;
     }
-    .pool-badge {
-      background: var(--accent);
-      color: white;
-      padding: 6px 14px;
-      border-radius: 999px;
-      font-weight: 700;
-      font-size: .95rem;
-      text-align: center;
-      white-space: nowrap;
+    .pool-display {
+      text-align: right;
     }
-    .pool-badge span { display: block; font-size: .65rem; font-weight: 400; opacity: .9; }
-    .mode-badge {
+    .pool-label {
+      font-size: .68rem;
+      font-weight: 600;
+      opacity: .75;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+    }
+    .pool-amount {
+      font-size: 1.7rem;
+      font-weight: 900;
+      letter-spacing: -.01em;
+      line-height: 1.1;
+    }
+    .conn-status {
       display: flex;
       align-items: center;
-      gap: 5px;
-      padding: 5px 12px;
-      border-radius: 999px;
-      font-size: .8rem;
-      font-weight: 700;
-      white-space: nowrap;
+      justify-content: flex-end;
+      gap: 4px;
+      margin-top: 3px;
+      font-size: .68rem;
+      opacity: .75;
     }
-    .mode-badge.viewer {
-      background: rgba(255,255,255,.15);
-      color: rgba(255,255,255,.9);
-      border: 1.5px solid rgba(255,255,255,.3);
+    .conn-dot {
+      width: 5px; height: 5px;
+      border-radius: 50%;
+      background: #aaa;
+      flex-shrink: 0;
     }
-    .mode-badge.admin {
-      background: var(--gold);
-      color: #5a3e00;
-      border: 1.5px solid #e6b800;
+    .header-btns {
+      display: flex;
+      flex-direction: row;
+      gap: 6px;
+      align-items: center;
+      justify-content: flex-end;
     }
-    .mode-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
     .btn-header {
       padding: 6px 13px;
       background: rgba(255,255,255,.15);
@@ -479,8 +484,8 @@
     /* ── Mobile tweaks ── */
     @media (max-width: 480px) {
       .header-left h1 { font-size: 1.2rem; }
-      .pool-badge { font-size: .85rem; padding: 5px 11px; }
-      .mode-badge { padding: 4px 10px; font-size: .75rem; }
+      .pool-amount { font-size: 1.3rem; }
+      .header-btns { flex-direction: row; }
       .card { padding: 14px 12px; }
       /* hide less critical columns on very small screens */
       .hide-xs { display: none !important; }
@@ -497,22 +502,20 @@
     <div class="subtitle">통신 AI 사업본부 축구 점수 맞추기 토토</div>
   </div>
   <div class="header-right">
-    <div class="pool-badge">
-      <span>총 상금 풀</span>
-      <span id="poolDisplay">₩0</span>
+    <div class="pool-display">
+      <div class="pool-label">총 상금 풀</div>
+      <div class="pool-amount" id="poolDisplay">₩0</div>
+      <div class="conn-status">
+        <span class="conn-dot" id="connectionDot"></span>
+        <span id="connectionText">연결 중…</span>
+      </div>
     </div>
-    <div style="display:flex;align-items:center;gap:5px;padding:5px 11px;border-radius:999px;background:rgba(255,255,255,.1);border:1.5px solid rgba(255,255,255,.2);font-size:.75rem;color:rgba(255,255,255,.85)" id="connStatus">
-      <span style="width:6px;height:6px;border-radius:50%;background:#aaa;flex-shrink:0" id="connectionDot"></span>
-      <span id="connectionText">연결 중…</span>
+    <div class="header-btns">
+      <button class="btn-header" onclick="openHistoryModal()">📋 기록</button>
+      <button class="btn-header viewer-only" onclick="openPwModal()">🔑 관리자</button>
+      <button class="btn-header admin-only" onclick="openNewGameModal()">새 게임</button>
+      <button class="btn-header admin-only" onclick="exitAdmin()">종료</button>
     </div>
-    <div class="mode-badge viewer" id="modeBadge">
-      <span class="mode-dot"></span>
-      <span id="modeBadgeText">👁 관전자</span>
-    </div>
-    <button class="btn-header" onclick="openHistoryModal()">📋 기록</button>
-    <button class="btn-header viewer-only" onclick="openPwModal()">🔑 관리자</button>
-    <button class="btn-header admin-only" onclick="openNewGameModal()">새 게임</button>
-    <button class="btn-header admin-only" onclick="exitAdmin()">종료</button>
   </div>
 </header>
 
@@ -817,17 +820,7 @@
   function setAdmin(on) {
     isAdmin = on;
     document.body.classList.toggle('admin-mode', on);
-    const badge = document.getElementById('modeBadge');
-    const text  = document.getElementById('modeBadgeText');
-    if (on) {
-      badge.className = 'mode-badge admin';
-      text.textContent = '🔑 관리자';
-      showToast('🔑 관리자 모드 활성화');
-    } else {
-      badge.className = 'mode-badge viewer';
-      text.textContent = '👁 관전자';
-      showToast('👁 관전자 모드로 전환');
-    }
+    showToast(on ? '🔑 관리자 모드 활성화' : '👁 관전자 모드로 전환');
   }
   function exitAdmin() { setAdmin(false); }
 
@@ -1166,6 +1159,7 @@
   if (!IS_CONFIGURED) {
     document.getElementById('setupBanner').classList.add('visible');
     document.getElementById('connectionText').textContent = '미설정';
+    document.getElementById('connectionDot').style.background = '#f44336';
     renderTeamLabels();
     render();
   } else {
@@ -1184,10 +1178,10 @@
       const dot  = document.getElementById('connectionDot');
       const text = document.getElementById('connectionText');
       if (snap.val()) {
-        dot.style.background  = '#4caf50';
-        text.textContent = '실시간 연결됨';
+        dot.style.background = '#4caf50';
+        text.textContent = '연결';
       } else {
-        dot.style.background  = '#f44336';
+        dot.style.background = '#f44336';
         text.textContent = '연결 끊김';
       }
     });
