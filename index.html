@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>⚽ FunToTo - 축구 점수 맞추기</title>
+  <title>⚽ 2026년 월드컵 AI 통신사업본부 FunToto</title>
   <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
@@ -102,6 +102,116 @@
       white-space: nowrap;
     }
     .btn-header:hover { background: rgba(255,255,255,.25); }
+
+    /* ── Countdown & Betting status ── */
+    .match-meta {
+      margin-top: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      align-items: center;
+    }
+    .betting-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 14px;
+      border-radius: 20px;
+      font-size: .82rem;
+      font-weight: 700;
+    }
+    .betting-status.open {
+      background: #e8f5e9;
+      color: #2e7d32;
+      border: 1.5px solid #a5d6a7;
+    }
+    .betting-status.closed {
+      background: #ffebee;
+      color: #c62828;
+      border: 1.5px solid #ef9a9a;
+    }
+    .countdown-wrap {
+      display: flex;
+      gap: 8px;
+      align-items: flex-end;
+      justify-content: center;
+    }
+    .countdown-block {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-width: 44px;
+    }
+    .countdown-num {
+      font-size: 1.6rem;
+      font-weight: 900;
+      line-height: 1;
+      color: var(--green);
+      background: #f1f8f4;
+      border-radius: 8px;
+      padding: 6px 10px;
+      min-width: 48px;
+      text-align: center;
+    }
+    .countdown-label {
+      font-size: .62rem;
+      font-weight: 600;
+      color: var(--muted);
+      margin-top: 3px;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+    }
+    .countdown-sep {
+      font-size: 1.4rem;
+      font-weight: 900;
+      color: var(--muted);
+      padding-bottom: 14px;
+    }
+    .match-kickoff {
+      font-size: .78rem;
+      color: var(--muted);
+      font-weight: 600;
+    }
+    .countdown-wrap.in-progress .countdown-num { color: #d32f2f; background: #ffebee; }
+    .countdown-wrap.ended .countdown-num { color: var(--muted); background: #f1f3f5; }
+
+    /* ── Live score ── */
+    .live-score-wrap {
+      margin-top: 12px;
+      display: flex;
+      justify-content: center;
+    }
+    .live-score-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      background: #d32f2f;
+      color: white;
+      font-weight: 900;
+      font-size: 1.15rem;
+      padding: 7px 20px;
+      border-radius: 24px;
+      letter-spacing: .02em;
+      animation: livepulse 1.8s ease-in-out infinite;
+    }
+    .live-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: #ff8a80;
+      animation: livepulse 1.8s ease-in-out infinite;
+    }
+    @keyframes livepulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: .55; }
+    }
+    tr.eliminated td {
+      text-decoration: line-through;
+      opacity: .38;
+    }
+    tr.eliminated .score-pill {
+      background: #e9ecef;
+      color: #adb5bd;
+    }
 
     /* ── Offline banner ── */
     /* ── Notice banner ── */
@@ -540,8 +650,8 @@
 <div class="notice-banner">참여를 원하시면 김현식에게 연락주세요!! 계좌: 김현식 전화번호(기업은행) </div>
 <header>
   <div class="header-left">
-    <h1>⚽ FunToTo</h1>
-    <div class="subtitle">통신 AI 사업본부 축구 점수 맞추기 토토</div>
+    <h1>⚽ 2026 FunToto</h1>
+    <div class="subtitle">월드컵 AI 통신사업본부 축구 점수 맞추기</div>
   </div>
   <div class="header-right">
     <div class="pool-display">
@@ -631,6 +741,18 @@
         <input type="text" id="awayTeamInput" placeholder="원정팀 이름" oninput="onTeamChange()" />
       </div>
     </div>
+    <div class="admin-only" style="margin-top:12px;display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">
+      <div>
+        <label style="display:block;font-size:.72rem;font-weight:700;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.04em">경기 날짜</label>
+        <input type="date" id="matchDateInput" oninput="onMatchDateTimeChange()"
+          style="padding:9px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:.9rem" />
+      </div>
+      <div>
+        <label style="display:block;font-size:.72rem;font-weight:700;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.04em">킥오프 시간</label>
+        <input type="time" id="matchTimeInput" value="19:00" oninput="onMatchDateTimeChange()"
+          style="padding:9px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:.9rem" />
+      </div>
+    </div>
     <div class="match-banner" id="matchBanner">
       <div style="text-align:center;width:100%">
         <div id="bannerTitle" style="font-size:.8rem;color:var(--muted);font-weight:600;margin-bottom:4px"></div>
@@ -639,6 +761,27 @@
           <span class="vs-text">VS</span>
           <span class="away-name" id="bannerAway">원정팀</span>
         </div>
+      </div>
+    </div>
+    <!-- Countdown & betting status (all viewers) -->
+    <div class="match-meta" id="matchMeta" style="display:none">
+      <div id="bettingStatus"></div>
+      <div class="match-kickoff" id="kickoffLabel"></div>
+      <div class="countdown-wrap" id="countdownWrap">
+        <div class="countdown-block"><div class="countdown-num" id="cdDays">00</div><div class="countdown-label">일</div></div>
+        <div class="countdown-sep">:</div>
+        <div class="countdown-block"><div class="countdown-num" id="cdHours">00</div><div class="countdown-label">시간</div></div>
+        <div class="countdown-sep">:</div>
+        <div class="countdown-block"><div class="countdown-num" id="cdMins">00</div><div class="countdown-label">분</div></div>
+        <div class="countdown-sep">:</div>
+        <div class="countdown-block"><div class="countdown-num" id="cdSecs">00</div><div class="countdown-label">초</div></div>
+      </div>
+    </div>
+    <div class="live-score-wrap" id="liveScoreDisplay" style="display:none">
+      <div class="live-score-badge">
+        <span class="live-dot"></span>
+        <span>LIVE</span>
+        <span id="liveScoreText">0 : 0</span>
       </div>
     </div>
   </div>
@@ -667,6 +810,27 @@
         <button class="btn-add" onclick="addEntry()">+ 추가</button>
       </div>
     </div>
+  </div>
+
+  <!-- Live Score (admin only) -->
+  <div class="card admin-only">
+    <div class="card-title">⚡ 실시간 스코어 입력</div>
+    <div class="result-row">
+      <div class="result-score-group">
+        <div>
+          <div class="result-label" style="color:#1565c0" id="liveHomeLabel">홈</div>
+          <input type="number" id="liveHome" min="0" max="20" placeholder="0" />
+        </div>
+        <span class="score-sep" style="font-size:1.4rem;padding-bottom:6px">:</span>
+        <div>
+          <div class="result-label" style="color:#b71c1c" id="liveAwayLabel">원정</div>
+          <input type="number" id="liveAway" min="0" max="20" placeholder="0" />
+        </div>
+      </div>
+      <button class="btn-result" onclick="applyLiveScore()">적용</button>
+      <button class="btn-reset" onclick="resetLiveScore()">초기화</button>
+    </div>
+    <div style="margin-top:8px;font-size:.78rem;color:var(--muted)">현재 점수 기준으로 더 이상 역전 불가능한 예상은 취소선 처리됩니다.</div>
   </div>
 
   <!-- Dividend Summary by Score -->
@@ -774,6 +938,8 @@
 
   let entries = [];
   let resultScore = null;
+  let liveScore = null;
+  let matchDateTime = null; // ISO string "YYYY-MM-DDTHH:mm"
   let homeTeam = '홈팀';
   let awayTeam = '원정팀';
   let gameTitle = '';
@@ -784,6 +950,7 @@
   let stateRef = null;
   let historyRef = null;
   let teamChangeTimer = null;
+  let countdownTimer = null;
 
   function teamHome() { return homeTeam.trim() || '홈팀'; }
   function teamAway() { return awayTeam.trim() || '원정팀'; }
@@ -791,7 +958,7 @@
   /* ── Firebase I/O ── */
   function saveState() {
     if (!stateRef) return;
-    stateRef.set({ entries, resultScore, homeTeam, awayTeam, gameTitle, gameCreatedAt })
+    stateRef.set({ entries, resultScore, liveScore, matchDateTime, homeTeam, awayTeam, gameTitle, gameCreatedAt })
       .catch(() => showToast('⚠️ 저장 실패 — Firebase 연결을 확인하세요'));
   }
 
@@ -799,12 +966,14 @@
     if (data) {
       entries        = Array.isArray(data.entries) ? data.entries : [];
       resultScore    = data.resultScore || null;
+      liveScore      = data.liveScore || null;
+      matchDateTime  = data.matchDateTime || null;
       homeTeam       = data.homeTeam || '홈팀';
       awayTeam       = data.awayTeam || '원정팀';
       gameTitle      = data.gameTitle || '';
       gameCreatedAt  = data.gameCreatedAt || null;
     } else {
-      entries = []; resultScore = null;
+      entries = []; resultScore = null; liveScore = null; matchDateTime = null;
       homeTeam = '홈팀'; awayTeam = '원정팀';
       gameTitle = ''; gameCreatedAt = null;
     }
@@ -814,12 +983,21 @@
     const gtEl = document.getElementById('gameTitleInput');
     const rhEl = document.getElementById('resultHome');
     const raEl = document.getElementById('resultAway');
+    const lhEl = document.getElementById('liveHome');
+    const laEl = document.getElementById('liveAway');
+    const mdEl = document.getElementById('matchDateInput');
+    const mtEl = document.getElementById('matchTimeInput');
     if (document.activeElement !== htEl) htEl.value = homeTeam === '홈팀' ? '' : homeTeam;
     if (document.activeElement !== atEl) atEl.value = awayTeam === '원정팀' ? '' : awayTeam;
     if (document.activeElement !== gtEl) gtEl.value = gameTitle;
     if (document.activeElement !== rhEl) rhEl.value = resultScore ? resultScore.home : '';
     if (document.activeElement !== raEl) raEl.value = resultScore ? resultScore.away : '';
+    if (lhEl && document.activeElement !== lhEl) lhEl.value = liveScore !== null ? liveScore.home : '';
+    if (laEl && document.activeElement !== laEl) laEl.value = liveScore !== null ? liveScore.away : '';
+    if (mdEl && document.activeElement !== mdEl) mdEl.value = matchDateTime ? matchDateTime.slice(0, 10) : '';
+    if (mtEl && document.activeElement !== mtEl) mtEl.value = matchDateTime ? matchDateTime.slice(11, 16) : '19:00';
     renderTeamLabels();
+    startCountdown();
     render();
   }
 
@@ -888,6 +1066,78 @@
     clearTimeout(teamChangeTimer);
     teamChangeTimer = setTimeout(saveState, 500);
   }
+
+  function onMatchDateTimeChange() {
+    const d = document.getElementById('matchDateInput').value;
+    const t = document.getElementById('matchTimeInput').value || '19:00';
+    matchDateTime = d ? `${d}T${t}` : null;
+    clearTimeout(teamChangeTimer);
+    teamChangeTimer = setTimeout(() => { saveState(); startCountdown(); }, 500);
+  }
+
+  function startCountdown() {
+    if (countdownTimer) { clearInterval(countdownTimer); countdownTimer = null; }
+    const meta = document.getElementById('matchMeta');
+    if (!matchDateTime) { meta.style.display = 'none'; return; }
+    meta.style.display = 'flex';
+    tickCountdown();
+    countdownTimer = setInterval(tickCountdown, 1000);
+  }
+
+  function tickCountdown() {
+    if (!matchDateTime) return;
+    const now = new Date();
+    const kickoff = new Date(matchDateTime);
+    const diffMs = kickoff - now;
+
+    // 배팅 마감: 경기 전날 18:00
+    const bettingDeadline = new Date(kickoff);
+    bettingDeadline.setDate(bettingDeadline.getDate() - 1);
+    bettingDeadline.setHours(18, 0, 0, 0);
+
+    const statusEl = document.getElementById('bettingStatus');
+    const bettingOpen = now < bettingDeadline;
+    if (bettingOpen) {
+      const deadlineStr = `${bettingDeadline.getMonth()+1}/${bettingDeadline.getDate()} 18:00`;
+      statusEl.innerHTML = `<span class="betting-status open">✅ 배팅 가능 (마감: ${deadlineStr})</span>`;
+    } else {
+      statusEl.innerHTML = `<span class="betting-status closed">🔒 배팅 마감</span>`;
+    }
+
+    const kd = kickoff;
+    const pad = n => String(n).padStart(2, '0');
+    const kickoffStr = `킥오프: ${kd.getFullYear()}.${pad(kd.getMonth()+1)}.${pad(kd.getDate())} ${pad(kd.getHours())}:${pad(kd.getMinutes())}`;
+    document.getElementById('kickoffLabel').textContent = kickoffStr;
+
+    const wrap = document.getElementById('countdownWrap');
+    if (diffMs <= 0 && diffMs > -120 * 60 * 1000) {
+      // 경기 시작 후 2시간 이내 → 진행중
+      wrap.className = 'countdown-wrap in-progress';
+      document.getElementById('cdDays').textContent  = '진행';
+      document.getElementById('cdHours').textContent = '중';
+      document.getElementById('cdMins').textContent  = '--';
+      document.getElementById('cdSecs').textContent  = '--';
+    } else if (diffMs <= -120 * 60 * 1000) {
+      // 경기 종료
+      wrap.className = 'countdown-wrap ended';
+      document.getElementById('cdDays').textContent  = '경기';
+      document.getElementById('cdHours').textContent = '종료';
+      document.getElementById('cdMins').textContent  = '--';
+      document.getElementById('cdSecs').textContent  = '--';
+      clearInterval(countdownTimer);
+    } else {
+      wrap.className = 'countdown-wrap';
+      const totalSec = Math.floor(diffMs / 1000);
+      const days  = Math.floor(totalSec / 86400);
+      const hours = Math.floor((totalSec % 86400) / 3600);
+      const mins  = Math.floor((totalSec % 3600) / 60);
+      const secs  = totalSec % 60;
+      document.getElementById('cdDays').textContent  = pad(days);
+      document.getElementById('cdHours').textContent = pad(hours);
+      document.getElementById('cdMins').textContent  = pad(mins);
+      document.getElementById('cdSecs').textContent  = pad(secs);
+    }
+  }
   function renderTeamLabels() {
     const h = teamHome(), a = teamAway();
     document.getElementById('bannerTitle').textContent = gameTitle || '';
@@ -923,12 +1173,18 @@
     // 새 게임 초기화
     const newTitle = document.getElementById('newGameTitle').value.trim();
     const now = Date.now();
-    entries = []; resultScore = null;
+    entries = []; resultScore = null; liveScore = null; matchDateTime = null;
     homeTeam = '홈팀'; awayTeam = '원정팀';
     gameTitle = newTitle; gameCreatedAt = now;
 
     document.getElementById('resultHome').value = '';
     document.getElementById('resultAway').value = '';
+    document.getElementById('liveHome').value = '';
+    document.getElementById('liveAway').value = '';
+    document.getElementById('matchDateInput').value = '';
+    document.getElementById('matchTimeInput').value = '19:00';
+    if (countdownTimer) { clearInterval(countdownTimer); countdownTimer = null; }
+    document.getElementById('matchMeta').style.display = 'none';
     document.getElementById('homeTeamInput').value = '';
     document.getElementById('awayTeamInput').value = '';
     document.getElementById('gameTitleInput').value = newTitle;
@@ -1055,6 +1311,21 @@
     saveState(); render();
   }
 
+  function applyLiveScore() {
+    const h = document.getElementById('liveHome').value;
+    const a = document.getElementById('liveAway').value;
+    if (h === '' || a === '') { alert('현재 스코어를 모두 입력해주세요.'); return; }
+    liveScore = { home: parseInt(h), away: parseInt(a) };
+    saveState(); render();
+  }
+
+  function resetLiveScore() {
+    liveScore = null;
+    document.getElementById('liveHome').value = '';
+    document.getElementById('liveAway').value = '';
+    saveState(); render();
+  }
+
   /* ── Render ── */
   function render() {
     const totalPool = entries.reduce((s, e) => s + e.amount, 0);
@@ -1094,20 +1365,32 @@
       }).join('');
     }
 
+    // Live score display
+    const liveWrap = document.getElementById('liveScoreDisplay');
+    if (liveScore !== null) {
+      document.getElementById('liveScoreText').textContent = `${liveScore.home} : ${liveScore.away}`;
+      liveWrap.style.display = 'flex';
+    } else {
+      liveWrap.style.display = 'none';
+    }
+
     // Entries table
+    const isEliminated = (e) => liveScore !== null && (e.home < liveScore.home || e.away < liveScore.away);
     const eBody = document.getElementById('entriesBody');
     if (!entries.length) {
       eBody.innerHTML = '<tr><td colspan="7" class="empty-state">아직 참여자가 없습니다.</td></tr>';
     } else {
       const paidCount = entries.filter(e => e.paid).length;
       const paidTotal = entries.filter(e => e.paid).reduce((s, e) => s + e.amount, 0);
-      eBody.innerHTML = entries.map(e => {
+      const sortedEntries = [...entries].sort((a, b) => (isEliminated(a) ? 1 : 0) - (isEliminated(b) ? 1 : 0));
+      eBody.innerHTML = sortedEntries.map(e => {
         const g = groups[scoreKey(e.home, e.away)];
         const ratio = totalPool > 0 && g ? totalPool / g.total : 0;
         const payout = Math.floor(e.amount * ratio);
         const profitRate = (ratio - 1) * 100;
         const isWinner = resultScore && resultScore.home === e.home && resultScore.away === e.away;
-        return `<tr class="${e.paid ? '' : 'unpaid'}">
+        const elim = isEliminated(e);
+        return `<tr class="${e.paid ? '' : 'unpaid'}${elim ? ' eliminated' : ''}">
           <td class="entry-name">${e.name}</td>
           <td>
             <label class="paid-toggle${e.paid ? ' checked' : ''}" onclick="togglePaid(${e.id})">
