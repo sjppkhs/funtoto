@@ -175,6 +175,93 @@
     .countdown-wrap.in-progress .countdown-num { color: #d32f2f; background: #ffebee; }
     .countdown-wrap.ended .countdown-num { color: var(--muted); background: #f1f3f5; }
 
+    /* ── Bingo grid ── */
+    .bingo-scroll {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    .bingo-table {
+      border-collapse: separate;
+      border-spacing: 4px;
+      margin: 0 auto;
+    }
+    .bingo-table th {
+      font-size: .72rem;
+      font-weight: 700;
+      color: var(--muted);
+      text-align: center;
+      padding: 4px 6px;
+      white-space: nowrap;
+    }
+    .bingo-table th.axis-home { color: #1565c0; }
+    .bingo-table th.axis-away { color: #b71c1c; }
+    .bingo-cell {
+      min-width: 68px;
+      min-height: 68px;
+      border-radius: 8px;
+      padding: 6px 7px;
+      vertical-align: top;
+      background: #f1f3f5;
+      border: 2px solid transparent;
+      transition: background .2s, border-color .2s;
+      cursor: default;
+    }
+    .bingo-cell.has-bet {
+      background: #e8f5e9;
+      border-color: #a5d6a7;
+    }
+    .bingo-cell.is-winner {
+      background: #fff8e1;
+      border-color: #ffd700;
+      box-shadow: 0 0 0 2px #ffd70055;
+    }
+    .bingo-cell.is-eliminated {
+      background: #fafafa;
+      border-color: #e0e0e0;
+      opacity: .45;
+    }
+    .bingo-cell-score {
+      font-size: .68rem;
+      font-weight: 800;
+      color: var(--muted);
+      margin-bottom: 4px;
+      text-align: center;
+    }
+    .bingo-cell.has-bet .bingo-cell-score { color: #2e7d32; }
+    .bingo-cell.is-winner .bingo-cell-score { color: #b8860b; }
+    .bingo-cell-names {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+    }
+    .bingo-name-tag {
+      font-size: .7rem;
+      font-weight: 600;
+      background: rgba(255,255,255,.7);
+      border-radius: 4px;
+      padding: 1px 5px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 80px;
+      color: #2e7d32;
+      text-align: center;
+    }
+    .bingo-cell.is-winner .bingo-name-tag { color: #b8860b; }
+    .bingo-cell.is-eliminated .bingo-name-tag { text-decoration: line-through; color: var(--muted); }
+    .bingo-amount {
+      font-size: .65rem;
+      color: var(--muted);
+      text-align: center;
+      margin-top: 3px;
+    }
+    .bingo-corner { background: none !important; border: none !important; }
+    @media (max-width: 480px) {
+      .bingo-cell { min-width: 54px; min-height: 54px; padding: 4px 5px; }
+      .bingo-name-tag { font-size: .65rem; max-width: 60px; }
+    }
+
     /* ── Live score ── */
     .live-score-wrap {
       margin-top: 12px;
@@ -833,6 +920,14 @@
     <div style="margin-top:8px;font-size:.78rem;color:var(--muted)">현재 점수 기준으로 더 이상 역전 불가능한 예상은 취소선 처리됩니다.</div>
   </div>
 
+  <!-- Bingo Grid -->
+  <div class="card">
+    <div class="card-title">🎯 베팅 빙고</div>
+    <div class="bingo-scroll">
+      <div id="bingoGrid"></div>
+    </div>
+  </div>
+
   <!-- Dividend Summary by Score -->
   <div class="card">
     <div class="card-title">📊 점수별 배당 현황</div>
@@ -1329,6 +1424,61 @@
       groups[k].count++;
     });
     const sortedGroups = Object.values(groups).sort((a, b) => b.total - a.total);
+
+    // Bingo grid
+    const bingoEl = document.getElementById('bingoGrid');
+    if (!entries.length) {
+      bingoEl.innerHTML = '<div class="empty-state" style="text-align:center;padding:20px">아직 입력된 예상이 없습니다.</div>';
+    } else {
+      const maxHome = Math.max(4, ...entries.map(e => e.home));
+      const maxAway = Math.max(4, ...entries.map(e => e.away));
+      // group entries by score
+      const bingoMap = {};
+      entries.forEach(e => {
+        const k = `${e.home}_${e.away}`;
+        if (!bingoMap[k]) bingoMap[k] = [];
+        bingoMap[k].push(e);
+      });
+      const isElim = (h, a) => liveScore !== null && (h < liveScore.home || a < liveScore.away);
+      const isWin  = (h, a) => resultScore && resultScore.home === h && resultScore.away === a;
+
+      let html = '<table class="bingo-table"><thead><tr>';
+      html += '<th class="bingo-corner"></th>';
+      for (let a = 0; a <= maxAway; a++) {
+        html += `<th class="axis-away">${teamAway()} ${a}</th>`;
+      }
+      html += '</tr></thead><tbody>';
+
+      for (let h = 0; h <= maxHome; h++) {
+        html += `<tr><th class="axis-home">${teamHome()} ${h}</th>`;
+        for (let a = 0; a <= maxAway; a++) {
+          const k = `${h}_${a}`;
+          const cell = bingoMap[k];
+          const win  = isWin(h, a);
+          const elim = isElim(h, a);
+          let cls = 'bingo-cell';
+          if (win)       cls += ' is-winner';
+          else if (elim) cls += ' is-eliminated';
+          else if (cell) cls += ' has-bet';
+
+          if (!cell) {
+            html += `<td class="${cls}"><div class="bingo-cell-score">${h}:${a}</div></td>`;
+          } else {
+            const total = cell.reduce((s, e) => s + e.amount, 0);
+            const names = cell.map(e =>
+              `<div class="bingo-name-tag">${win ? '🏆 ' : ''}${e.name}</div>`
+            ).join('');
+            html += `<td class="${cls}">
+              <div class="bingo-cell-score">${h}:${a}${win ? ' 🏆' : ''}</div>
+              <div class="bingo-cell-names">${names}</div>
+            </td>`;
+          }
+        }
+        html += '</tr>';
+      }
+      html += '</tbody></table>';
+      bingoEl.innerHTML = html;
+    }
 
     // Dividend table
     const dBody = document.getElementById('dividendBody');
