@@ -1316,6 +1316,14 @@
         const count = Array.isArray(g.entries) ? g.entries.length : 0;
         const pool = Array.isArray(g.entries) ? g.entries.reduce((s,e) => s + (e.amount||0), 0) : 0;
         const resultText = g.resultScore ? `${g.resultScore.home} : ${g.resultScore.away}` : null;
+        const winners = resultText && Array.isArray(g.entries)
+          ? g.entries.filter(e => e.home === g.resultScore.home && e.away === g.resultScore.away).map(e => e.name)
+          : [];
+        const winnerText = winners.length
+          ? `<div style="font-size:.76rem;color:#b8860b;font-weight:700;margin-top:4px">🏆 ${winners.join(', ')}</div>`
+          : resultText
+            ? `<div style="font-size:.76rem;color:var(--muted);margin-top:4px">당첨자 없음</div>`
+            : '';
         const loadBtn = isAdmin
           ? `<button class="btn-load" onclick="loadGameFromHistory('${g.id}')">불러오기</button>`
           : '';
@@ -1325,6 +1333,7 @@
               <div class="history-title">${title}</div>
               <div class="history-teams">${home} <span style="color:var(--muted);font-weight:400">vs</span> ${away}</div>
               <div class="history-info">${date} &nbsp;·&nbsp; 참여 ${count}명 &nbsp;·&nbsp; ${fmt(pool)}</div>
+              ${winnerText}
             </div>
             <span class="history-result${resultText ? '' : ' pending'}">${resultText || '미결'}</span>
             ${loadBtn}
