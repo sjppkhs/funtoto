@@ -1110,22 +1110,11 @@
     document.getElementById('kickoffLabel').textContent = kickoffStr;
 
     const wrap = document.getElementById('countdownWrap');
-    if (diffMs <= 0 && diffMs > -120 * 60 * 1000) {
-      // 경기 시작 후 2시간 이내 → 진행중
-      wrap.className = 'countdown-wrap in-progress';
-      document.getElementById('cdDays').textContent  = '진행';
-      document.getElementById('cdHours').textContent = '중';
-      document.getElementById('cdMins').textContent  = '--';
-      document.getElementById('cdSecs').textContent  = '--';
-    } else if (diffMs <= -120 * 60 * 1000) {
-      // 경기 종료
-      wrap.className = 'countdown-wrap ended';
-      document.getElementById('cdDays').textContent  = '경기';
-      document.getElementById('cdHours').textContent = '종료';
-      document.getElementById('cdMins').textContent  = '--';
-      document.getElementById('cdSecs').textContent  = '--';
+    if (diffMs <= 0) {
+      wrap.style.display = 'none';
       clearInterval(countdownTimer);
     } else {
+      wrap.style.display = 'flex';
       wrap.className = 'countdown-wrap';
       const totalSec = Math.floor(diffMs / 1000);
       const days  = Math.floor(totalSec / 86400);
