@@ -1474,7 +1474,15 @@
         const g = snap.val();
         // 결과 확정된 과거 경기만 잠금. 데이터가 없으면 잠금 유지(없는 키에 쓰기 방지)
         activeTabLocked = g ? !!g.resultScore : true;
-        if (g) applySnapshot(g);
+        if (g) {
+          // history 레코드에 matchDateTime이 없으면 탭 메타데이터에서 보완
+          if (!g.matchDateTime && tab.matchDateTime) g.matchDateTime = tab.matchDateTime;
+          // history 레코드에 matchDateTime이 있는데 탭 메타데이터에 없으면 역전파(자동 마이그레이션)
+          if (g.matchDateTime && !tab.matchDateTime && isAdmin && tabsRef) {
+            tabsRef.child(tab.id).update({ matchDateTime: g.matchDateTime }).catch(() => {});
+          }
+          applySnapshot(g);
+        }
       });
     }
   }
@@ -1497,9 +1505,15 @@
     const id = 'view-' + historyKey;
     const order = gameTabs.length;
     closeHistoryModal();
-    tabsRef.child(id).set({ id, title: title || '이전 경기', source: historyKey, order })
-      .then(() => { switchToTab(id); showToast('📑 과거 경기 탭을 열었습니다'); })
-      .catch(() => showToast('⚠️ 탭 저장 실패'));
+    // 히스토리 레코드를 읽어 matchDateTime을 탭 메타데이터에 포함 → 타이머 복원
+    historyRef.child(historyKey).once('value', snap => {
+      const g = snap.val();
+      const tabData = { id, title: title || '이전 경기', source: historyKey, order };
+      if (g && g.matchDateTime) tabData.matchDateTime = g.matchDateTime;
+      tabsRef.child(id).set(tabData)
+        .then(() => { switchToTab(id); showToast('📑 과거 경기 탭을 열었습니다'); })
+        .catch(() => showToast('⚠️ 탭 저장 실패'));
+    });
   }
 
   function confirmNewGameTab() {
@@ -1525,13 +1539,14 @@
       historyRef.child(archivedKey).set({
         gameTitle: oldTitle,
         homeTeam, awayTeam,
-        entries, resultScore, liveScore,
+        entries, resultScore, liveScore, matchDateTime,
         createdAt: gameCreatedAt || archiveId,
         archivedAt: archiveId
       }).catch(() => {});
     }
 
     // 새 게임 상태로 즉시 초기화 및 저장
+    const oldMatchDateTime = matchDateTime; // 직전 경기 킥오프 시간 (탭 메타데이터용)
     const now = Date.now();
     entries = []; resultScore = null; liveScore = null;
     homeTeam = newHome; awayTeam = newAway;
@@ -1569,8 +1584,9 @@
     // 직전 경기를 닫기 전까지 유지되는 '열람 탭'으로 남긴다(점수 입력은 새 라이브 경기만)
     if (archivedKey && tabsRef) {
       const viewId = 'view-' + archivedKey;
-      tabsRef.child(viewId).set({ id: viewId, title: oldTitle, source: archivedKey, order: gameTabs.length })
-        .catch(() => {});
+      const tabMeta = { id: viewId, title: oldTitle, source: archivedKey, order: gameTabs.length };
+      if (oldMatchDateTime) tabMeta.matchDateTime = oldMatchDateTime;
+      tabsRef.child(viewId).set(tabMeta).catch(() => {});
     }
     // 라이브 탭 제목 갱신(funtoto/tabs 공유) 후 라이브 탭으로 전환
     if (tabsRef && liveTabId) {
@@ -1704,7 +1720,7 @@
       historyRef.child(String(archiveId)).set({
         gameTitle: gameTitle || defaultTitle(),
         homeTeam, awayTeam,
-        entries, resultScore,
+        entries, resultScore, matchDateTime,
         createdAt: gameCreatedAt || archiveId,
         archivedAt: archiveId
       }).catch(() => {});

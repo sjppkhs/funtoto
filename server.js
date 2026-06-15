@@ -52,7 +52,12 @@ const server = http.createServer((req, res) => {
 
   // GET / or /index.html — serve the app
   if (req.method === 'GET' && (url === '/' || url === '/index.html')) {
-    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+    res.writeHead(200, {
+      'Content-Type': 'text/html; charset=utf-8',
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
     res.end(fs.readFileSync(HTML_FILE, 'utf8'));
     return;
   }
