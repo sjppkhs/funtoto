@@ -300,6 +300,108 @@
       color: #adb5bd;
     }
 
+    /* ── Admin tabs ── */
+    .admin-tabs {
+      display: none;
+      background: #fff;
+      border-bottom: 2px solid var(--border);
+      align-items: stretch;
+      min-height: 46px;
+    }
+    body.admin-mode .admin-tabs { display: flex; }
+    .game-tabs-strip {
+      display: flex;
+      align-items: stretch;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      flex: 1;
+      min-width: 0;
+    }
+    .game-tabs-strip::-webkit-scrollbar { height: 3px; }
+    .game-tabs-strip::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+    .game-tab {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 0 14px;
+      font-size: .84rem;
+      font-weight: 600;
+      color: var(--muted);
+      border-bottom: 3px solid transparent;
+      border-right: 1px solid var(--border);
+      cursor: pointer;
+      white-space: nowrap;
+      transition: color .15s, background .15s;
+      flex-shrink: 0;
+      max-width: 180px;
+    }
+    .game-tab.active {
+      color: var(--green);
+      border-bottom-color: var(--green);
+      background: #f6fbf8;
+    }
+    .game-tab:hover:not(.active) { background: #f8f9fa; color: var(--text); }
+    .game-tab.dragging { opacity: .4; }
+    .game-tab.drag-over { box-shadow: inset 2px 0 0 var(--green); }
+    .game-tab-title {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      max-width: 120px;
+    }
+    .game-tab-close {
+      flex-shrink: 0;
+      width: 18px; height: 18px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: .8rem;
+      color: var(--muted);
+      transition: background .15s, color .15s;
+    }
+    .game-tab-close:hover { background: #fee2e2; color: #dc2626; }
+    .tab-actions {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+      padding: 0 8px;
+      border-left: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .tab-action-btn {
+      display: flex; align-items: center; justify-content: center;
+      gap: 4px;
+      padding: 5px 10px;
+      border-radius: 6px;
+      font-size: .8rem; font-weight: 600;
+      color: var(--muted);
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background .15s, color .15s;
+    }
+    .tab-action-btn:hover { background: #f1f3f5; color: var(--text); }
+    .tab-action-btn.new-btn { color: var(--green); }
+    .tab-action-btn.new-btn:hover { background: var(--green-pale); }
+
+    /* ── Tab panels ── */
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+    .tab-panel-inner {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 20px 16px;
+    }
+    .new-game-panel .panel-title {
+      font-size: 1.1rem;
+      font-weight: 800;
+      color: var(--green);
+      margin-bottom: 16px;
+    }
+    .new-game-panel p {
+      font-size: .9rem;
+      color: var(--muted);
+      margin-bottom: 16px;
+    }
+
     /* ── Offline banner ── */
     /* ── Notice banner ── */
     .notice-banner {
@@ -752,7 +854,6 @@
     <div class="header-btns">
       <button class="btn-header" onclick="openHistoryModal()">📋 기록</button>
       <button class="btn-header viewer-only" onclick="openPwModal()">🔑 관리자</button>
-      <button class="btn-header admin-only" onclick="openNewGameModal()">새 게임</button>
       <button class="btn-header admin-only" onclick="exitAdmin()">종료</button>
     </div>
   </div>
@@ -803,6 +904,71 @@
     </div>
     <div style="margin-top:16px;text-align:right">
       <button class="btn-cancel-modal" onclick="closeHistoryModal()">닫기</button>
+    </div>
+  </div>
+</div>
+
+<!-- Game Tab Bar (admin + viewer) -->
+<div class="admin-tabs" id="gameTabsBar" style="display:none">
+  <div class="game-tabs-strip" id="gameTabsStrip"></div>
+  <div class="tab-actions admin-only">
+    <div class="tab-action-btn" onclick="switchAdminTab('history')">📋 이전경기</div>
+    <div class="tab-action-btn new-btn" onclick="switchAdminTab('new')">＋ 새경기</div>
+  </div>
+  <div class="tab-actions viewer-only">
+    <div class="tab-action-btn" onclick="openHistoryModal()">📋 기록열람</div>
+  </div>
+</div>
+
+<!-- Tab Panel: 이전 경기 -->
+<div class="tab-panel" id="tabPanelHistory">
+  <div class="tab-panel-inner">
+    <div class="history-list" id="adminHistoryList">
+      <div class="history-empty">불러오는 중…</div>
+    </div>
+  </div>
+</div>
+
+<!-- Tab Panel: 새 경기 -->
+<div class="tab-panel" id="tabPanelNew">
+  <div class="tab-panel-inner">
+    <div class="card new-game-panel" style="max-width:520px;margin:0 auto">
+      <div class="panel-title">➕ 새 경기 시작</div>
+      <p>현재 게임은 기록에 저장됩니다. 새 경기 정보를 입력하고 시작하세요.</p>
+
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div>
+          <label style="display:block;font-size:.72rem;font-weight:700;color:var(--muted);margin-bottom:5px;text-transform:uppercase;letter-spacing:.04em">경기명</label>
+          <input type="text" id="newGameTitleTab" placeholder="예) 2026-06-19 멕시코전"
+            style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:.95rem" />
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 48px 1fr;gap:10px;align-items:flex-end">
+          <div>
+            <label style="display:block;font-size:.72rem;font-weight:700;color:#1565c0;margin-bottom:5px;text-transform:uppercase;letter-spacing:.04em">홈팀</label>
+            <input type="text" id="newHomeTeam" placeholder="홈팀 이름"
+              style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:.95rem" />
+          </div>
+          <div style="text-align:center;font-weight:900;color:var(--muted);padding-bottom:10px">VS</div>
+          <div>
+            <label style="display:block;font-size:.72rem;font-weight:700;color:#b71c1c;margin-bottom:5px;text-transform:uppercase;letter-spacing:.04em">원정팀</label>
+            <input type="text" id="newAwayTeam" placeholder="원정팀 이름"
+              style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:.95rem" />
+          </div>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <div style="flex:1;min-width:140px">
+            <label style="display:block;font-size:.72rem;font-weight:700;color:var(--muted);margin-bottom:5px;text-transform:uppercase;letter-spacing:.04em">경기 날짜</label>
+            <input type="date" id="newMatchDate"
+              style="width:100%;padding:10px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:.9rem" />
+          </div>
+          <div style="flex:1;min-width:120px">
+            <label style="display:block;font-size:.72rem;font-weight:700;color:var(--muted);margin-bottom:5px;text-transform:uppercase;letter-spacing:.04em">킥오프 시간</label>
+            <input type="time" id="newMatchTime" value="19:00"
+              style="width:100%;padding:10px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:.9rem" />
+          </div>
+        </div>
+        <button class="btn-confirm-new" style="width:100%;margin-top:4px" onclick="confirmNewGameTab()">기록하고 새 경기 시작 →</button>
+      </div>
     </div>
   </div>
 </div>
@@ -1053,6 +1219,22 @@
   /* ── Firebase I/O ── */
   function saveState() {
     if (!stateRef) return;
+    // 과거(비라이브) 탭: 결과 확정 전이면 해당 history 기록에 직접 저장(예상 점수 입력 등 허용),
+    // 결과가 확정된 경기는 열람 전용으로 막아 라이브 데이터·확정 결과를 보호한다.
+    if (activeTabId && activeTabId !== liveTabId) {
+      if (!isAdmin) return; // 과거 경기 history 쓰기는 관리자만 (뷰어 콘솔 호출 차단)
+      if (activeTabLocked) {
+        showToast('🔒 결과가 확정된 경기는 수정할 수 없습니다');
+        return;
+      }
+      const tab = gameTabs.find(t => t.id === activeTabId);
+      if (tab && tab.source && historyRef) {
+        historyRef.child(tab.source)
+          .update({ entries, resultScore, liveScore, matchDateTime, homeTeam, awayTeam, gameTitle })
+          .catch(() => showToast('⚠️ 저장 실패 — Firebase 연결을 확인하세요'));
+      }
+      return;
+    }
     stateRef.set({ entries, resultScore, liveScore, matchDateTime, homeTeam, awayTeam, gameTitle, gameCreatedAt })
       .catch(() => showToast('⚠️ 저장 실패 — Firebase 연결을 확인하세요'));
   }
@@ -1131,10 +1313,284 @@
     }
   }
 
+  /* ── Tab system (admin + viewer) — Firebase 공유 모델 ──
+     gameTabs[] 항목은 메타데이터만 담는다: { id, title, source }
+       - source === 'live'  → 라이브 탭. 데이터는 funtoto/state 에서 읽는다.
+       - source === <history key> → 과거 경기 열람 탭. funtoto/history/<key> 에서 읽는다.
+     탭 집합은 funtoto/tabs 에 저장돼 모든 기기가 동일한 탭을 본다. */
+  let currentAdminTab = 'current';
+  let gameTabs    = [];     // [{ id, title, source }]
+  let activeTabId = null;
+  let liveTabId   = null;   // source === 'live' 인 탭의 id
+  let isViewingHistory = false; // 뷰어가 과거 경기를 읽기 전용 열람 중이면 true (라이브 콜백 차단)
+  let activeTabLocked = false;  // 활성 탭이 '결과 확정된' 과거 경기면 true → 수정 차단(라이브 탭/결과 전 경기는 false)
+  let tabsRef     = null;   // funtoto/tabs
+
+  /* 패널 전환 (이전경기/새경기 패널) */
+  function switchAdminTab(tab) {
+    currentAdminTab = tab;
+    document.querySelector('main').style.display = tab === 'current' ? '' : 'none';
+    document.getElementById('tabPanelHistory').classList.toggle('active', tab === 'history');
+    document.getElementById('tabPanelNew').classList.toggle('active', tab === 'new');
+    if (tab === 'history') renderHistoryList('adminHistoryList');
+    if (tab === 'new') clearNewGameForm();
+  }
+
+  function clearNewGameForm() {
+    document.getElementById('newGameTitleTab').value = '';
+    document.getElementById('newHomeTeam').value     = '';
+    document.getElementById('newAwayTeam').value     = '';
+    document.getElementById('newMatchDate').value    = '';
+    document.getElementById('newMatchTime').value    = '19:00';
+  }
+
+  /* Firebase 탭 목록 구독 — 관리자/뷰어 공통. 모든 기기가 동일 탭을 본다. */
+  function subscribeTabs() {
+    if (!tabsRef) return;
+    tabsRef.on('value', snap => {
+      const raw = snap.val();
+      const list = raw
+        ? Object.values(raw).sort((a, b) => (a.order || 0) - (b.order || 0))
+        : [];
+      gameTabs = list;
+      const live = gameTabs.find(t => t.source === 'live');
+      liveTabId = live ? live.id : null;
+      // 활성 탭이 사라졌으면(다른 기기가 닫음) 라이브 탭으로 회귀
+      if (!gameTabs.some(t => t.id === activeTabId)) {
+        activeTabId = liveTabId;
+        if (activeTabId) loadTabData(activeTabId);
+      }
+      renderTabs();
+      document.getElementById('gameTabsBar').style.display = gameTabs.length ? 'flex' : 'none';
+    });
+  }
+
+  /* 관리자: 라이브 탭이 없으면 funtoto/tabs 에 하나 만든다. */
+  function ensureLiveTab() {
+    if (!tabsRef || !isAdmin) return;
+    if (gameTabs.some(t => t.source === 'live')) return;
+    const id = 'live';
+    tabsRef.child(id).set({ id, title: gameTitle || '현재 경기', source: 'live', order: 0 })
+      .catch(() => showToast('⚠️ 탭 저장 실패'));
+    activeTabId = id;
+  }
+
+  /* HTML 특수문자 이스케이프 — Firebase 데이터를 innerHTML 에 넣기 전 */
+  function escapeHtml(s) {
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+
+  /* 탭바 렌더 */
+  function renderTabs() {
+    const strip = document.getElementById('gameTabsStrip');
+    if (!strip) return;
+    strip.innerHTML = gameTabs.map(t => {
+      const isLive = t.source === 'live';
+      // 관리자만 드래그로 순서 변경 가능. 뷰어는 공유된 순서를 보기만 한다.
+      const drag = isAdmin
+        ? ` draggable="true" ondragstart="onTabDragStart(event,'${t.id}')" ondragover="onTabDragOver(event,'${t.id}')" ondragleave="onTabDragLeave(event)" ondrop="onTabDrop(event,'${t.id}')" ondragend="onTabDragEnd(event)"`
+        : '';
+      return `
+      <div class="game-tab${t.id === activeTabId ? ' active' : ''}"${drag} onclick="switchToTab('${t.id}')">
+        <span class="game-tab-title">${isLive ? '🔴 ' : ''}${escapeHtml(t.title || '경기')}</span>
+        ${isAdmin && !isLive ? `<span class="game-tab-close" onclick="event.stopPropagation();closeTab('${t.id}')">✕</span>` : ''}
+      </div>`;
+    }).join('');
+  }
+
+  /* 탭 드래그앤드롭 순서 변경 — 관리자 전용(데스크톱 마우스).
+     배열 순서를 바꾼 뒤 order 를 funtoto/tabs 에 다시 써서 모든 기기에 공유한다. */
+  let dragSrcId = null;
+  function onTabDragStart(e, id) {
+    if (!isAdmin) return;
+    dragSrcId = id;
+    e.dataTransfer.effectAllowed = 'move';
+    try { e.dataTransfer.setData('text/plain', id); } catch (_) {}
+    e.currentTarget.classList.add('dragging');
+  }
+  function onTabDragOver(e, id) {
+    if (dragSrcId == null) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (id !== dragSrcId) e.currentTarget.classList.add('drag-over');
+  }
+  function onTabDragLeave(e) {
+    e.currentTarget.classList.remove('drag-over');
+  }
+  function onTabDrop(e, targetId) {
+    if (dragSrcId == null) return;
+    e.preventDefault();
+    if (dragSrcId !== targetId) {
+      const from = gameTabs.findIndex(t => t.id === dragSrcId);
+      const to   = gameTabs.findIndex(t => t.id === targetId);
+      if (from > -1 && to > -1) {
+        const [moved] = gameTabs.splice(from, 1);
+        gameTabs.splice(to, 0, moved);
+        renderTabs();          // 즉시 화면 반영
+        persistTabOrder();     // 새 순서를 Firebase 에 저장 → 다른 기기에도 동기화
+      }
+    }
+    dragSrcId = null;
+  }
+  function onTabDragEnd() {
+    dragSrcId = null;
+    const strip = document.getElementById('gameTabsStrip');
+    if (strip) strip.querySelectorAll('.game-tab').forEach(n => n.classList.remove('dragging', 'drag-over'));
+  }
+
+  /* 현재 배열 순서를 order 로 환산해 funtoto/tabs 에 일괄 저장 */
+  function persistTabOrder() {
+    if (!isAdmin || !tabsRef) return;
+    const updates = {};
+    gameTabs.forEach((t, i) => { updates[t.id + '/order'] = i; });
+    tabsRef.update(updates).catch(() => showToast('⚠️ 순서 저장 실패'));
+  }
+
+  /* 탭 클릭 — 데이터를 source 에서 읽어 표시 */
+  function switchToTab(id) {
+    const tab = gameTabs.find(t => t.id === id);
+    if (!tab) return;
+    isViewingHistory = false; // 탭으로 전환하면 읽기 전용 열람 종료
+    activeTabId = id;
+    renderTabs();
+    document.querySelector('main').style.display = '';
+    document.getElementById('tabPanelHistory').classList.remove('active');
+    document.getElementById('tabPanelNew').classList.remove('active');
+    currentAdminTab = 'current';
+    loadTabData(id);
+  }
+
+  /* source 에 따라 데이터를 읽어 applySnapshot. 라이브=state, 그 외=history/<key> */
+  function loadTabData(id) {
+    const tab = gameTabs.find(t => t.id === id);
+    if (!tab) return;
+    if (tab.source === 'live') {
+      activeTabLocked = false; // 라이브 탭은 항상 수정 가능
+      if (stateRef) stateRef.once('value', snap => applySnapshot(snap.val()));
+    } else if (historyRef) {
+      activeTabLocked = true; // fail-locked: 콜백 도착 전 saveState 호출 시 쓰기 차단
+      historyRef.child(tab.source).once('value', snap => {
+        const g = snap.val();
+        // 결과 확정된 과거 경기만 잠금. 데이터가 없으면 잠금 유지(없는 키에 쓰기 방지)
+        activeTabLocked = g ? !!g.resultScore : true;
+        if (g) applySnapshot(g);
+      });
+    }
+  }
+
+  /* 탭 닫기 — 관리자 전용. funtoto/tabs 에서 제거(라이브 탭은 못 닫음). */
+  function closeTab(id) {
+    if (!isAdmin || !tabsRef) return;
+    const tab = gameTabs.find(t => t.id === id);
+    if (!tab || tab.source === 'live') { showToast('라이브 탭은 닫을 수 없습니다'); return; }
+    tabsRef.child(id).remove().catch(() => showToast('⚠️ 탭 삭제 실패'));
+    if (activeTabId === id) { activeTabId = liveTabId; if (activeTabId) switchToTab(activeTabId); }
+  }
+
+  /* 과거 경기 열람 탭 추가 — 관리자 전용. funtoto/tabs 에 메타데이터만 기록. */
+  function addViewTab(historyKey, title) {
+    if (!isAdmin || !tabsRef) return;
+    // 같은 경기를 이미 연 탭이 있으면 그쪽으로 전환
+    const existing = gameTabs.find(t => t.source === historyKey);
+    if (existing) { switchToTab(existing.id); return; }
+    const id = 'view-' + historyKey;
+    const order = gameTabs.length;
+    closeHistoryModal();
+    tabsRef.child(id).set({ id, title: title || '이전 경기', source: historyKey, order })
+      .then(() => { switchToTab(id); showToast('📑 과거 경기 탭을 열었습니다'); })
+      .catch(() => showToast('⚠️ 탭 저장 실패'));
+  }
+
+  function confirmNewGameTab() {
+    if (!isAdmin) return; // 뷰어의 콘솔 직접 호출로 라이브 데이터가 초기화되는 것을 차단
+    // 새 경기 입력값 수집
+    const newTitle    = document.getElementById('newGameTitleTab').value.trim();
+    const newHome     = document.getElementById('newHomeTeam').value.trim() || '홈팀';
+    const newAway     = document.getElementById('newAwayTeam').value.trim() || '원정팀';
+    const newDate     = document.getElementById('newMatchDate').value;
+    const newTime     = document.getElementById('newMatchTime').value || '19:00';
+    const newDT       = newDate ? `${newDate}T${newTime}` : null;
+
+    // 현재 게임 기록 보관 — 닫기 전까지 유지될 열람 탭으로 남기기 위해 키/제목을 잡아둔다
+    const oldTitle = gameTitle || defaultTitle();
+    // 응모자·결과뿐 아니라 라이브 점수·제목·팀명이 있어도 직전 경기로 보고 탭을 남긴다
+    // (관리자가 막 진입한 완전 초기 상태의 빈 경기만 제외)
+    const hasData = entries.length > 0 || resultScore || liveScore
+      || gameTitle || (homeTeam && homeTeam !== '홈팀') || (awayTeam && awayTeam !== '원정팀');
+    let archivedKey = null;
+    if (hasData && historyRef) {
+      const archiveId = Date.now();
+      archivedKey = String(archiveId);
+      historyRef.child(archivedKey).set({
+        gameTitle: oldTitle,
+        homeTeam, awayTeam,
+        entries, resultScore, liveScore,
+        createdAt: gameCreatedAt || archiveId,
+        archivedAt: archiveId
+      }).catch(() => {});
+    }
+
+    // 새 게임 상태로 즉시 초기화 및 저장
+    const now = Date.now();
+    entries = []; resultScore = null; liveScore = null;
+    homeTeam = newHome; awayTeam = newAway;
+    gameTitle = newTitle; gameCreatedAt = now;
+    matchDateTime = newDT;
+
+    // UI 동기화
+    document.getElementById('gameTitleInput').value  = newTitle;
+    document.getElementById('homeTeamInput').value   = newHome === '홈팀' ? '' : newHome;
+    document.getElementById('awayTeamInput').value   = newAway === '원정팀' ? '' : newAway;
+    document.getElementById('matchDateInput').value  = newDate;
+    document.getElementById('matchTimeInput').value  = newTime;
+    document.getElementById('resultHome').value      = '';
+    document.getElementById('resultAway').value      = '';
+    document.getElementById('liveHome').value        = '';
+    document.getElementById('liveAway').value        = '';
+    if (countdownTimer) { clearInterval(countdownTimer); countdownTimer = null; }
+
+    // Firebase 즉시 저장
+    if (stateRef) {
+      stateRef.set({ entries, resultScore, liveScore, matchDateTime, homeTeam, awayTeam, gameTitle, gameCreatedAt: now })
+        .catch(() => showToast('⚠️ 저장 실패'));
+    }
+
+    // 폼 초기화
+    document.getElementById('newGameTitleTab').value = '';
+    document.getElementById('newHomeTeam').value     = '';
+    document.getElementById('newAwayTeam').value     = '';
+    document.getElementById('newMatchDate').value    = '';
+    document.getElementById('newMatchTime').value    = '19:00';
+
+    renderTeamLabels();
+    startCountdown();
+    render();
+    // 직전 경기를 닫기 전까지 유지되는 '열람 탭'으로 남긴다(점수 입력은 새 라이브 경기만)
+    if (archivedKey && tabsRef) {
+      const viewId = 'view-' + archivedKey;
+      tabsRef.child(viewId).set({ id: viewId, title: oldTitle, source: archivedKey, order: gameTabs.length })
+        .catch(() => {});
+    }
+    // 라이브 탭 제목 갱신(funtoto/tabs 공유) 후 라이브 탭으로 전환
+    if (tabsRef && liveTabId) {
+      tabsRef.child(liveTabId).update({ title: newTitle || defaultTitle() }).catch(() => {});
+    }
+    if (liveTabId) switchToTab(liveTabId);
+    switchAdminTab('current');
+    showToast('🆕 새 경기가 시작됐습니다');
+  }
+
   /* ── Admin mode ── */
   function setAdmin(on) {
     isAdmin = on;
     document.body.classList.toggle('admin-mode', on);
+    if (on) {
+      ensureLiveTab();   // 라이브 탭이 없으면 funtoto/tabs 에 생성
+    } else {
+      switchAdminTab('current');
+    }
+    renderTabs();        // 닫기 버튼 표시 여부 갱신
     showToast(on ? '🔑 관리자 모드 활성화' : '👁 관전자 모드로 전환');
   }
   function exitAdmin() { setAdmin(false); }
@@ -1292,8 +1748,8 @@
   }
   function closeHistoryModal() { document.getElementById('historyModal').classList.remove('visible'); }
 
-  function renderHistoryList() {
-    const listEl = document.getElementById('historyList');
+  function renderHistoryList(containerId = 'historyList') {
+    const listEl = document.getElementById(containerId);
     if (!historyRef) {
       listEl.innerHTML = '<div class="history-empty">Firebase가 연결되지 않았습니다.</div>';
       return;
@@ -1320,44 +1776,63 @@
           ? g.entries.filter(e => e.home === g.resultScore.home && e.away === g.resultScore.away).map(e => e.name)
           : [];
         const winnerText = winners.length
-          ? `<div style="font-size:.76rem;color:#b8860b;font-weight:700;margin-top:4px">🏆 ${winners.join(', ')}</div>`
+          ? `<div style="font-size:.76rem;color:#b8860b;font-weight:700;margin-top:4px">🏆 ${winners.map(escapeHtml).join(', ')}</div>`
           : resultText
             ? `<div style="font-size:.76rem;color:var(--muted);margin-top:4px">당첨자 없음</div>`
             : '';
+        // onclick 인라인 문자열 자리(HTML 쌍따옴표 속성 + JS 단따옴표 문자열의 이중 컨텍스트).
+        // 브라우저가 속성값을 HTML 디코드한 뒤 JS로 넘기므로, JS 문자열 이스케이프(백슬래시→단따옴표 순서)
+        // 후 HTML 속성 이스케이프까지 두 단계를 거쳐야 단따옴표 주입을 막는다. escapeHtml 한 번으로는 안 막힌다.
+        const safeTitle = escapeHtml(String(title).replace(/\\/g, '\\\\').replace(/'/g, "\\'"));
         const loadBtn = isAdmin
-          ? `<button class="btn-load" onclick="loadGameFromHistory('${g.id}')">불러오기</button>`
-          : '';
+          ? `<button class="btn-load" onclick="addViewTab('${g.id}','${safeTitle}')">탭으로 열기</button>
+             <button class="btn-load" style="background:#e3f2fd;color:#1565c0;border-color:#90caf9" onclick="loadGameFromHistory('${g.id}')">라이브로 불러오기</button>`
+          : `<button class="btn-load" style="background:#e3f2fd;color:#1565c0;border-color:#90caf9" onclick="loadGameFromHistory('${g.id}', true)">열람</button>`;
         return `
           <div class="history-item">
             <div class="history-meta">
-              <div class="history-title">${title}</div>
-              <div class="history-teams">${home} <span style="color:var(--muted);font-weight:400">vs</span> ${away}</div>
+              <div class="history-title">${escapeHtml(title)}</div>
+              <div class="history-teams">${escapeHtml(home)} <span style="color:var(--muted);font-weight:400">vs</span> ${escapeHtml(away)}</div>
               <div class="history-info">${date} &nbsp;·&nbsp; 참여 ${count}명 &nbsp;·&nbsp; ${fmt(pool)}</div>
               ${winnerText}
             </div>
-            <span class="history-result${resultText ? '' : ' pending'}">${resultText || '미결'}</span>
+            <span class="history-result${resultText ? '' : ' pending'}">${resultText ? escapeHtml(resultText) : '미결'}</span>
             ${loadBtn}
           </div>`;
       }).join('');
     });
   }
 
-  function loadGameFromHistory(id) {
-    if (!historyRef || !stateRef) return;
+  function loadGameFromHistory(id, viewOnly = false) {
+    if (!historyRef) return;
     historyRef.child(id).once('value', snapshot => {
       const g = snapshot.val();
       if (!g) return;
-      stateRef.set({
-        entries:      g.entries || [],
-        resultScore:  g.resultScore || null,
-        homeTeam:     g.homeTeam || '홈팀',
-        awayTeam:     g.awayTeam || '원정팀',
-        gameTitle:    g.gameTitle || '',
-        gameCreatedAt: g.createdAt || null
-      }).then(() => {
-        closeHistoryModal();
-        showToast(`📂 "${g.gameTitle || '게임'}" 불러오기 완료`);
-      }).catch(() => showToast('⚠️ 불러오기 실패'));
+      closeHistoryModal();
+      if (!viewOnly && isAdmin && stateRef) {
+        // 관리자: 과거 경기를 라이브(funtoto/state)로 올린다. 라이브 탭이 자동 반영된다.
+        stateRef.set({
+          entries:       g.entries || [],
+          resultScore:   g.resultScore || null,
+          liveScore:     null,
+          matchDateTime: g.matchDateTime || null,
+          homeTeam:      g.homeTeam || '홈팀',
+          awayTeam:      g.awayTeam || '원정팀',
+          gameTitle:     g.gameTitle || '',
+          gameCreatedAt: g.createdAt || null
+        }).then(() => {
+          // 라이브 탭 제목 갱신 후 라이브 탭으로 전환
+          if (tabsRef && liveTabId) tabsRef.child(liveTabId).update({ title: g.gameTitle || '현재 경기' }).catch(() => {});
+          if (liveTabId) switchToTab(liveTabId);
+          showToast(`📂 "${g.gameTitle || '게임'}" 라이브로 불러오기 완료`);
+        }).catch(() => showToast('⚠️ 불러오기 실패'));
+      } else {
+        // 뷰어: Firebase 를 수정하지 않고 읽기 전용으로 표시만 한다.
+        // 라이브 탭이 활성인 상태이므로, stateRef 콜백이 라이브 데이터로 덮어쓰지 못하게 막는다.
+        isViewingHistory = true;
+        applySnapshot(g);
+        showToast(`👁 "${g.gameTitle || '게임'}" 열람 (읽기 전용)`);
+      }
     });
   }
 
@@ -1640,10 +2115,16 @@
     const db = firebase.database();
     stateRef   = db.ref('funtoto/state');
     historyRef = db.ref('funtoto/history');
+    tabsRef    = db.ref('funtoto/tabs');
 
-    // 실시간 데이터 동기화 — 연결된 모든 기기가 자동 업데이트
+    // 탭 목록 구독 — 관리자/뷰어 공통. 모든 기기가 동일한 탭을 본다.
+    subscribeTabs();
+
+    // 실시간 라이브 데이터 동기화 — 라이브 탭을 보고 있을 때만 UI 반영
     stateRef.on('value', snapshot => {
-      applySnapshot(snapshot.val());
+      const data = snapshot.val();
+      if (isViewingHistory) return; // 뷰어가 과거 경기 열람 중이면 라이브로 덮어쓰지 않는다
+      if (!activeTabId || activeTabId === liveTabId) applySnapshot(data);
     });
 
     // 연결 상태 표시
