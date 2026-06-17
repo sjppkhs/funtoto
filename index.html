@@ -359,6 +359,17 @@
       transition: background .15s, color .15s;
     }
     .game-tab-close:hover { background: #fee2e2; color: #dc2626; }
+    .game-tab-default {
+      flex-shrink: 0;
+      width: 18px; height: 18px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: .85rem;
+      color: var(--muted);
+      transition: background .15s, color .15s, transform .1s;
+    }
+    .game-tab-default:hover { background: #fff8e1; color: #f59e0b; transform: scale(1.15); }
+    .game-tab-default.is-default { color: #f59e0b; }
     .tab-actions {
       display: flex;
       align-items: center;
@@ -1325,6 +1336,10 @@
   let isViewingHistory = false; // 뷰어가 과거 경기를 읽기 전용 열람 중이면 true (라이브 콜백 차단)
   let activeTabLocked = false;  // 활성 탭이 '결과 확정된' 과거 경기면 true → 수정 차단(라이브 탭/결과 전 경기는 false)
   let tabsRef     = null;   // funtoto/tabs
+  let settingsRef = null;   // funtoto/settings (기본 탭 등 공유 설정)
+  let defaultTabId   = null;  // 첫 로드 시 보여줄 기본 탭 id (관리자가 지정, 모든 기기 공유)
+  let settingsLoaded = false; // settings 1회 이상 수신 여부 (초기 탭 결정 타이밍 조율)
+  let initialTabApplied = false; // 첫 로드 시 초기 탭을 한 번만 적용하기 위한 플래그
 
   /* 패널 전환 (이전경기/새경기 패널) */
   function switchAdminTab(tab) {
@@ -1355,14 +1370,39 @@
       gameTabs = list;
       const live = gameTabs.find(t => t.source === 'live');
       liveTabId = live ? live.id : null;
-      // 활성 탭이 사라졌으면(다른 기기가 닫음) 라이브 탭으로 회귀
-      if (!gameTabs.some(t => t.id === activeTabId)) {
+      if (!initialTabApplied) {
+        // 첫 로드: 관리자가 지정한 기본 탭(없으면 라이브 탭)을 연다
+        applyInitialTab();
+      } else if (!gameTabs.some(t => t.id === activeTabId)) {
+        // 활성 탭이 사라졌으면(다른 기기가 닫음) 라이브 탭으로 회귀
         activeTabId = liveTabId;
         if (activeTabId) loadTabData(activeTabId);
       }
       renderTabs();
       document.getElementById('gameTabsBar').style.display = gameTabs.length ? 'flex' : 'none';
     });
+  }
+
+  /* 첫 로드 시 초기 탭 결정 — settings(기본 탭)와 tabs(목록)가 모두 도착해야 실행.
+     기본 탭이 지정돼 있고 존재하면 그 탭을, 아니면 라이브 탭을 연다. 한 번만 적용. */
+  function applyInitialTab() {
+    if (initialTabApplied) return;
+    if (!settingsLoaded || !gameTabs.length) return; // 두 데이터가 모두 준비될 때까지 대기
+    initialTabApplied = true;
+    const pick = (defaultTabId && gameTabs.some(t => t.id === defaultTabId))
+      ? defaultTabId : liveTabId;
+    activeTabId = pick;
+    renderTabs();
+    if (activeTabId) loadTabData(activeTabId);
+  }
+
+  /* 관리자: 클릭한 탭을 기본 탭으로 설정/해제. funtoto/settings 에 저장돼 모든 기기에 공유. */
+  function setDefaultTab(id) {
+    if (!isAdmin || !settingsRef) return;
+    const next = (defaultTabId === id) ? null : id; // 같은 탭을 다시 누르면 해제
+    settingsRef.update({ defaultTab: next })
+      .then(() => showToast(next ? '⭐ 기본 탭으로 설정했습니다' : '기본 탭 설정을 해제했습니다'))
+      .catch(() => showToast('⚠️ 설정 저장 실패'));
   }
 
   /* 관리자: 라이브 탭이 없으면 funtoto/tabs 에 하나 만든다. */
@@ -1391,8 +1431,10 @@
       const drag = isAdmin
         ? ` draggable="true" ondragstart="onTabDragStart(event,'${t.id}')" ondragover="onTabDragOver(event,'${t.id}')" ondragleave="onTabDragLeave(event)" ondrop="onTabDrop(event,'${t.id}')" ondragend="onTabDragEnd(event)"`
         : '';
+      const isDefault = t.id === defaultTabId;
       return `
       <div class="game-tab${t.id === activeTabId ? ' active' : ''}"${drag} onclick="switchToTab('${t.id}')">
+        ${isAdmin ? `<span class="game-tab-default${isDefault ? ' is-default' : ''}" title="${isDefault ? '기본 탭 (클릭 시 해제)' : '첫 로드 시 보여줄 기본 탭으로 설정'}" onclick="event.stopPropagation();setDefaultTab('${t.id}')">${isDefault ? '⭐' : '☆'}</span>` : ''}
         <span class="game-tab-title">${isLive ? '🔴 ' : ''}${escapeHtml(t.title || '경기')}</span>
         ${isAdmin && !isLive ? `<span class="game-tab-close" onclick="event.stopPropagation();closeTab('${t.id}')">✕</span>` : ''}
       </div>`;
@@ -1492,6 +1534,8 @@
     if (!isAdmin || !tabsRef) return;
     const tab = gameTabs.find(t => t.id === id);
     if (!tab || tab.source === 'live') { showToast('라이브 탭은 닫을 수 없습니다'); return; }
+    // 닫는 탭이 기본 탭이면 설정 해제(존재하지 않는 탭이 기본으로 남지 않도록)
+    if (id === defaultTabId && settingsRef) settingsRef.update({ defaultTab: null }).catch(() => {});
     tabsRef.child(id).remove().catch(() => showToast('⚠️ 탭 삭제 실패'));
     if (activeTabId === id) { activeTabId = liveTabId; if (activeTabId) switchToTab(activeTabId); }
   }
@@ -2129,9 +2173,19 @@
   } else {
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
-    stateRef   = db.ref('funtoto/state');
-    historyRef = db.ref('funtoto/history');
-    tabsRef    = db.ref('funtoto/tabs');
+    stateRef    = db.ref('funtoto/state');
+    historyRef  = db.ref('funtoto/history');
+    tabsRef     = db.ref('funtoto/tabs');
+    settingsRef = db.ref('funtoto/settings');
+
+    // 공유 설정 구독 — 기본 탭(첫 로드 시 보여줄 탭). 모든 기기 공통.
+    settingsRef.on('value', snap => {
+      const s = snap.val() || {};
+      defaultTabId = s.defaultTab || null;
+      settingsLoaded = true;
+      renderTabs();        // 별 표시 갱신
+      applyInitialTab();   // 첫 로드 시 기본 탭 적용(탭 목록이 준비됐다면)
+    });
 
     // 탭 목록 구독 — 관리자/뷰어 공통. 모든 기기가 동일한 탭을 본다.
     subscribeTabs();
