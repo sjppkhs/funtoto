@@ -1460,7 +1460,7 @@
       return `
       <div class="game-tab${t.id === activeTabId ? ' active' : ''}"${drag} onclick="switchToTab('${t.id}')">
         ${isAdmin ? `<span class="game-tab-default${isDefault ? ' is-default' : ''}" title="${isDefault ? '기본 탭 (클릭 시 해제)' : '첫 로드 시 보여줄 기본 탭으로 설정'}" onclick="event.stopPropagation();setDefaultTab('${t.id}')">${isDefault ? '⭐' : '☆'}</span>` : ''}
-        <span class="game-tab-title">${isLive ? '🔴 ' : ''}${escapeHtml(t.title || '경기')}</span>
+        <span class="game-tab-title">${escapeHtml(t.title || '경기')}</span>
         ${isAdmin && !isLive ? `<span class="game-tab-close" onclick="event.stopPropagation();closeTab('${t.id}')">✕</span>` : ''}
       </div>`;
     }).join('');
